@@ -190,7 +190,7 @@ Heindrinken task thingy
 ### TODO
 
 - [ ] Get Images (lots of them)
-    
+  
     - [ ] **[EarthExplorer Bulk Download Application (BDA)](https://earthexplorer.usgs.gov/bulk)**
     
 - [ ] Construct the tile2vec trainer in a single python file
@@ -201,7 +201,7 @@ Heindrinken task thingy
 
 - [ ] Run tile2vec python script on edi cluster 
 
-- [ ] Check project web page for information
+- [x] Check project web page for information
 
 - [ ] Create a background information thing
 
@@ -215,10 +215,10 @@ Heindrinken task thingy
 
     - [x] Use LaTeX
     - [x] Download thesis format from informatics page
-    - [ ] Make it as short as possible while getting the point across (bullet points)
+    - [x] Make it as short as possible while getting the point across (bullet points)
 
-    - [ ] Include diagrams (where data is coming from, how it is being merged what methods you are using, output you are getting)
-    - [ ] Can I provide one line impact statement which says the impact of the project. 
+    - [x] Include diagrams (where data is coming from, how it is being merged what methods you are using, output you are getting)
+    - [x] Can I provide one line impact statement which says the impact of the project. 
     - [ ] Have a never ending report with a bullet point list at the start detailing what is being done (with some figures)
     - [ ] Include lots of figures
 
