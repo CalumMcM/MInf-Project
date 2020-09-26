@@ -6,6 +6,7 @@ import zipfile
 import tarfile
 from ChannelMerge import ChannelMerge
 
+# EarthExplorer credentials
 username = 'CalumMcM'
 password = getpass.getpass()
 
