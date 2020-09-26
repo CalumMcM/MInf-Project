@@ -4,9 +4,8 @@ import json
 import getpass
 import zipfile
 import tarfile
-from ChannelMerge import ChannelMerge
+from ImagePrep import ImagePrep
 
-# EarthExplorer credentials
 username = 'CalumMcM'
 password = getpass.getpass()
 
@@ -83,8 +82,8 @@ def download_images(orderid, resp):
         tar.close()
 
         # Create a new ChannelMerge class and begin processing of the image
-        channelMerge = ChannelMerge(file_name)
-        channelMerge.process_image();
+        imagePrep = ImagePrep(file_name)
+        imagePrep.prepareImage();
 
     # Time at finish
     now = datetime.now()

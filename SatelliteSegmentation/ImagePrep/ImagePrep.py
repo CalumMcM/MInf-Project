@@ -5,6 +5,7 @@ from osgeo import gdal
 from PIL import Image
 from os import listdir
 from os import remove
+import shutil
 
 class ImagePrep:
 
@@ -20,15 +21,16 @@ class ImagePrep:
 
         desired_types = ['toa', 'sr']
 
+        # Filter all bands except for 2 and 3
         wanted_files = [str for str in dir_list if any(sub in str for sub in desired_bands)]
 
+        # Filter all other images except for toa and sr types
         wanted_files = [str for str in wanted_files if any(sub in str for sub in desired_types)]
 
         bands = []
-        print (wanted_files)
-        wanted_files2 = ['LC08_L1TP_029030_20130712_20170309_01_T1_sr_band2.tif', 'LC08_L1TP_029030_20130712_20170309_01_T1_sr_band3.tif', 'LC08_L1TP_029030_20130712_20170309_01_T1_sr_band4.tif']
+
         sorted_files = self.sort_files(wanted_files)
-        print (sorted_files)
+
         for file in sorted_files:
 
             # Open file
@@ -105,6 +107,12 @@ class ImagePrep:
         return iO
 
 
+    # Delete the downloaded images, freeing up memory
+    def deleteSource(self):
+        shutil.rmtree('Extracted/' + self.file_name)
+        remove('raw_images/' + self.file_name + '.tar.gz')
+        pass
+
     # Main method
     def prepareImage(self):
 
@@ -169,12 +177,3 @@ class ImagePrep:
             normalizedImage.save('data/images/' + self.file_name + '.tif')
 
         self.deleteSource()
-
-# Delete the downloaded images, freeing up memory
-def deleteSource(self):
-    remove('Extracted/' + self.file_name)
-    remove('raw_images' + self.file_name + '.tar.gz')
-
-if __name__ == "__main__":
-    testChannel = ImagePrep('LC082190692020090401T1-SC20200925123343')
-    testChannel.prepareImage()
