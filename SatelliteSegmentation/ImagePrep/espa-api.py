@@ -85,7 +85,8 @@ def download_images(orderid, resp):
         channelMerge = ChannelMerge(file_name)
         channelMerge.process_image();
 
-    # Time at finish ### NOT WORKING, PRINTING SAME TIME AS START TIME
+    # Time at finish
+    now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print("End Time =", current_time)
 
@@ -93,9 +94,7 @@ def download_images(orderid, resp):
 def main():
 
     orderid = input('Enter orderid: ') # espa-calummcmeekin@mac.com-08242020-042201-261
-
-    orderid = 'espa-calummcmeekin@mac.com-08242020-042201-261'
-
+                                       # espa-P100fdrjxk6lm
     check_order_status(orderid)
 
     # Get order
