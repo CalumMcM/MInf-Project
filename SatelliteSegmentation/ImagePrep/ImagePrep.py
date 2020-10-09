@@ -139,6 +139,40 @@ class ImagePrep:
         output = (input - lower_stretch_from) * ((upper_stretch_to - lower_stretch_to) / (upper_stretch_from - lower_stretch_from)) + lower_stretch_to
 
         return output
+
+    def is_outlier(self, points, thresh=3.5):
+        """
+        Returns a boolean array with True if points are outliers and False
+        otherwise.
+
+        Parameters:
+        -----------
+            points : An numobservations by numdimensions array of observations
+            thresh : The modified z-score to use as a threshold. Observations with
+                a modified z-score (based on the median absolute deviation) greater
+                than this value will be classified as outliers.
+
+        Returns:
+        --------
+            mask : A numobservations-length boolean array.
+
+        References:
+        ----------
+            Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
+            Handle Outliers", The ASQC Basic References in Quality Control:
+            Statistical Techniques, Edward F. Mykytka, Ph.D., Editor.
+        """
+        if len(points.shape) == 1:
+            points = points[:,None]
+        median = np.median(points, axis=0)
+        diff = np.sum((points - median)**2, axis=-1)
+        diff = np.sqrt(diff)
+        med_abs_deviation = np.median(diff)
+
+        modified_z_score = 0.6745 * diff / med_abs_deviation
+
+        return modified_z_score > thresh
+
     # Main method
     def prepareImage(self):
 
@@ -158,21 +192,12 @@ class ImagePrep:
             b3 = self.norm(b3_link.ReadAsArray().astype(np.float))
             b4 = self.norm(b4_link.ReadAsArray().astype(np.float))
 
-
             # Create RGB
             rgb = np.dstack((b4,b3,b2))
             #rgb = np.dstack((b2_link.ReadAsArray().astype(np.float), b3_link.ReadAsArray().astype(np.float), b4_link.ReadAsArray().astype(np.float)))
             #rgb = np.concatenate((b2, b3, b4))
             del b2, b3, b4
 
-            # Visualize RGB
-            #import matplotlib.pyplot as plt
-            #plt.imshow(rgb)
-            #plt.show()
-
-            # Export RGB as TIFF file
-            # Important: Here is where you can set the custom stretch
-            # I use min as 2nd percentile and max as 98th percentile
             rgb = (rgb * 255).astype(np.uint8)
 
             #-----Converting image to LAB Color model-----------------------------------
@@ -211,6 +236,7 @@ class ImagePrep:
 
             im.save(self.dir_path + 'mergedNotContrasted.tif')
 
+
             #-----Reading the image-----------------------------------------------------
             img = cv2.imread(self.dir_path + 'mergedNotContrasted.tif', 1)
 
@@ -231,11 +257,7 @@ class ImagePrep:
             final = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
             cv2.imwrite(self.dir_path + 'final_after.png', final)
 
-            # Create an image object
-            imageObject     = Image.open(self.dir_path + "mergedNotContrasted.tif")
-
             # Get histogram
-
             img = cv2.imread(self.dir_path + "final_after.png")
             color = ('b','g','r')
             for i,col in enumerate(color):
@@ -244,23 +266,11 @@ class ImagePrep:
                 plt.xlim([0,256])
             plt.show()
 
-            """
-            print (imageObject)
-            hist, bins = np.histogram(imageObject, bins=50)
-
-            width = 0.7 * (bins[1] - bins[0])
-            center = (bins[:-1] + bins[1:]) / 2
-            plt.bar(center, hist, align='center', width=width)
-            plt.title("Gaussian Histogram")
-            plt.xlabel("Value")
-            plt.ylabel("Frequency")
-            plt.show()
-            """
-            #enhancer_object = ImageEnhance.Contrast(imageObject)
-            #normalizedImage = enhancer_object.enhance(3)
+            # Create an image object
+            imageObject   = Image.open(self.dir_path + "mergedNotContrasted.tif")
 
             # Split the red, green and blue bands from the Image
-            multiBands      = imageObject.split()
+            multiBands = imageObject.split()
 
             # Apply point operations that does contrast stretching on each color band
             normalizedRedBand      = multiBands[0].point(self.normalizeRed)
@@ -279,7 +289,6 @@ class ImagePrep:
             # Crop the image
             normalizedImage = normalizedImage.crop((691,630,6890,7100))
 
-
             # Save the image
             normalizedImage.save('data/images/' + self.file_name + '.tif')
 
@@ -293,8 +302,11 @@ if __name__ == "__main__":
     #imagePrep = ImagePrep("LC080900862013101101T1-SC20200930162215")
     #imagePrep.prepareImage();
 
+    imagePrep = ImagePrep("LC080900862020042101T1-SC20200930162325")
+    imagePrep.prepareImage();
+
     #imagePrep = ImagePrep("LC080900862019072401T1-SC20200930162234")
     #imagePrep.prepareImage();
 
-    imagePrep = ImagePrep("LC080900862020050701T1-SC20200930161922")
-    imagePrep.prepareImage();
+    #imagePrep = ImagePrep("LC080900862020050701T1-SC20200930161922")
+    #imagePrep.prepareImage();
