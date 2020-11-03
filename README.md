@@ -123,7 +123,6 @@ pip install torch
         - **Possible issue**: This data does not encompass multi images for the same area meaning it could help in providing training data but it would not help with monitoring changes in biomes over the years
         - **ANother issue** The data is in 'requester pays' mode so I am apprehensive to use the data as it does not state anywhere how much the price per image is. (could be from £0.01 to £10) 
 - Landsat Imagery
-    - 
     - https://www-sciencedirect-com.ezproxy.is.ed.ac.uk/science/article/pii/S0034425713002204 
         - Mainly used Landsat 7 due to limited option
             - Landsat 7 had failures in 2003 meaning there is lost data
@@ -183,10 +182,6 @@ Courses that are good for machine learning:
 
 Heindrinken task thingy
 
-
-
-
-
 ### TODO
 
 - [ ] Get Images (lots of them)
@@ -224,7 +219,7 @@ Heindrinken task thingy
 
 - [ ] Create a TEAMs project page and put all the files there
 
-- [ ] Run the scripts on the university Remote Desktop
+- [x] Run the scripts on the university Remote Desktop
 
 - [ ] 
 
