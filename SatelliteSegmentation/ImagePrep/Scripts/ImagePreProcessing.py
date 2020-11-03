@@ -10,6 +10,12 @@ from skimage import exposure
 from PIL import ImageEnhance
 from matplotlib import pyplot as plt
 
+#####################################################
+##########  FILE USED TO EXPLORE MULTIPLE  ##########
+########## IMAGE PRE-PROCESSING TECHNIQUES ##########
+#####################################################
+
+
 class ImagePrep:
 
     def __init__(self, file_name):

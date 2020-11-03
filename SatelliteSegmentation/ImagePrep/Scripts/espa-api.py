@@ -6,6 +6,12 @@ import zipfile
 import tarfile
 from ImagePrep import ImagePrep
 
+#####################################################
+########## FILE FOR EXTRACTING IMAGES FROM ##########
+##########          ESPA ORDER             ##########
+#####################################################
+
+
 username = 'CalumMcM'
 password = getpass.getpass()
 
