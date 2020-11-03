@@ -1,11 +1,11 @@
-##Motivations
+## Motivations
 
 - Indicators are needed:
     - To study and mitigate against further environmental degradation, as well as monitor progress to sustainable development, indicators of environmental status are required (Hall 2001) [https://www.tandfonline.com/doi/abs/10.1080/0143116031000103853#aHR0cHM6Ly93d3cudGFuZGZvbmxpbmUuY29tL2RvaS9wZGYvMTAuMTA4MC8wMTQzMTE2MDMxMDAwMTAzODUzP25lZWRBY2Nlc3M9dHJ1ZUBAQDA=]
 -  Remote sensing can provide a wealth of environmental data over a range of spatial and temporal scales and so may play a major role in the provision of indicators of environmental condition that may inform sustainable development and associated decision-making (Schultink 1992, Rao 2001, Rao and Pant 2001, Chen 2002) [https://www.tandfonline.com/doi/abs/10.1080/0143116031000103853#aHR0cHM6Ly93d3cudGFuZGZvbmxpbmUuY29tL2RvaS9wZGYvMTAuMTA4MC8wMTQzMTE2MDMxMDAwMTAzODUzP25lZWRBY2Nlc3M9dHJ1ZUBAQDA=]
 - Land cover change is one of the most important variables of environmental change and represents the largest threat to ecological systems for at least the next 100 years (Skole 1994, Chapinet al. 2000) [https://www.tandfonline.com/doi/abs/10.1080/0143116031000103853#aHR0cHM6Ly93d3cudGFuZGZvbmxpbmUuY29tL2RvaS9wZGYvMTAuMTA4MC8wMTQzMTE2MDMxMDAwMTAzODUzP25lZWRBY2Nlc3M9dHJ1ZUBAQDA=]
 
-##Possible techniques:
+## Possible techniques:
 
 - Create what an ideal final product would be
 
@@ -113,7 +113,7 @@ pip install torch
 
   ​    
 
-##Datasets
+## Datasets
 
 - Radiant
     - email ITO to find out if i need money for AWS
@@ -192,6 +192,7 @@ Heindrinken task thingy
 - [ ] Get Images (lots of them)
   
     - [ ] **[EarthExplorer Bulk Download Application (BDA)](https://earthexplorer.usgs.gov/bulk)**
+    - [ ] Google Earth Engine
     
 - [ ] Construct the tile2vec trainer in a single python file
 
@@ -203,28 +204,8 @@ Heindrinken task thingy
 
 - [x] Check project web page for information
 
-- [ ] Create a background information thing
+- [ ] Create background information
 
 - [ ] Collecting ground truth where you can find out what biome is at what co-ordinate
 
-- [ ] Get a hypothesis: E.g. Do places with a certain biome have a certain quality of life
-
 - [ ] For a better mark develop an algorithm (2nd year (?))
-
-- [ ] Send Sohan reports every week and a half
-
-    - [x] Use LaTeX
-    - [x] Download thesis format from informatics page
-    - [x] Make it as short as possible while getting the point across (bullet points)
-
-    - [x] Include diagrams (where data is coming from, how it is being merged what methods you are using, output you are getting)
-    - [x] Can I provide one line impact statement which says the impact of the project. 
-    - [ ] Have a never ending report with a bullet point list at the start detailing what is being done (with some figures)
-    - [ ] Include lots of figures
-
-- [ ] Create a TEAMs project page and put all the files there
-
-- [ ] Run the scripts on the university Remote Desktop
-
-- [ ] 
-
