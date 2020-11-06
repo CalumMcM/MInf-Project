@@ -128,7 +128,20 @@ pip install torch
 
 A biome is a geographical region containing diverse combinations of fauna and flora. The difference between biomes depends on their temperature, humidity and how fertile the soil is. The main biomes in South America (where this paper is focused) are the Amazonia, Caatinga, Cerrado, Atlantic Forest, Pampas and the Pantanal. Each of these biomes are made up of unique combinations of smaller ecoregions.
 
-- Biomes change characterestics depending on the season -> Try get images in same timezone
+- Amazonia
+    - 22-34°C [constant & year round]
+- Cerrado
+    - Dry winter: 
+        - April - September
+        - 0°C -> 46°C
+    - Rainy summer:  
+        - October - March
+        - 20°C -> 26°C
+- Caatinga
+    - 32-36°C
+
+### Ecoregions
+
 - Forest (78% [Wiki])
     - Tropical broadleaf forest (majority)
         - Broad green canopy hiding any view of the ground below
