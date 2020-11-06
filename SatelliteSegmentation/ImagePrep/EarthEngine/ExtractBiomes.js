@@ -32,11 +32,13 @@ var exportBands = [
 
 // Amazonia
 var geometryAMA = ee.Geometry.Polygon([[
-  [-90.80975401310168, -20.519994257183307],  // BL point
-  [-30.93634092716418, -20.519994257183307],  // BR point
-  [-30.93634092716418, -0.617795520325061],  // TL point
-  [-90.80975401310168, -0.617795520325061],  // TR point
-  [-90.80975401310168, -8.519994257183307]   // BL point
+  [-68, -9],  // BL point
+  [-66, -9],
+  [-58, -15],
+  [-50, -9],  // BR point
+  [-49, -1],  // TR point
+  [-68, -1],  // TL point
+  [-68, -9]   // BL point
   ]]);
 
 // Caatinga
@@ -67,7 +69,6 @@ var mosaicCER = ee.ImageCollection(asset)
 var mosaicAMA = ee.ImageCollection(asset)
                .filterMetadata('biome', 'equals', 'AMAZONIA')
                .filterMetadata('year', 'equals', year)
-               .filterBounds(geometryAMA)
                .mosaic();
 
 var mosaicCAT = ee.ImageCollection(asset)
@@ -82,55 +83,56 @@ print(mosaicAMA.bandNames());
 print(mosaicCAT.bandNames());
 /*
 // Shows the mosaic on map
-Map.addLayer(mosaicCER.clip(geometryCER), 
+Map.addLayer(mosaicCER.clip(geometryCER),
     {
         bands: 'median_swir1,median_nir,median_red',
         gain: '0.08,0.06,0.2',
         gamma: 0.75
     },
-    
+
     'mapbiomas mosaic CER'
 );
 */
 
 // Shows the mosaic on map
-Map.addLayer(mosaicAMA.clip(geometryAMA), 
+Map.addLayer(geometryAMA, {color: 'FF0000'}, 'colored');
+
+
+Map.addLayer(mosaicAMA,
     {
         bands: 'median_swir1,median_nir,median_red', // CONVERT TO RGB
         gain: '0.08,0.06,0.2',
         gamma: 0.75
     },
-    
+
     'mapbiomas mosaic AMA'
 );
 /*
 // Shows the mosaic on map
-Map.addLayer(mosaicCAT.clip(geometryCAT), 
+Map.addLayer(mosaicCAT.clip(geometryCAT),
     {
         bands: 'median_swir1,median_nir,median_red',
         gain: '0.08,0.06,0.2',
         gamma: 0.75
     },
-    
+
     'mapbiomas mosaic CAT'
 );
 
-//Map.addLayer(geometryCER, {color: 'FF0000'}, 'colored');
 //Map.addLayer(geometryAMA, {color: '323aa8'}, 'colorblue');
 //Map.addLayer(geometryCAT, {color: '43ed00'}, 'colorgreen');
 // Exports the data to MAPBIOMAS-EXPORT folder in your Google Drive
 /*
 Export.image.toDrive(
       {
-        'image': mosaic.int32(), 
-        'description': fileName, 
-        'folder': 'MAPBIOMAS-EXPORT', 
+        'image': mosaic.int32(),
+        'description': fileName,
+        'folder': 'MAPBIOMAS-EXPORT',
         'fileNamePrefix': fileName,
-        'region': geometry, 
-        'scale': 30, 
+        'region': geometry,
+        'scale': 30,
         'maxPixels': 1e13,
         'fileFormat': 'GeoTIFF'
       }
 );
 */
-
