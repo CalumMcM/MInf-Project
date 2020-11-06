@@ -18,6 +18,8 @@ var geometryAMA = ee.Geometry.Polygon([[
 
 Map.addLayer(geometryAMA);
 
+var tileCount = 1;
+
 // Make a list of features using a for loop
 var features = [];
 var images = [];
@@ -77,12 +79,13 @@ function addImage(geometry, biome, type, scale, maxPixels)
 
     Export.image.toDrive({
       image: unitScale,
-      description: id,
+      description: tileCount.toString(),
       folder: biome,
       scale: 30,
       region: geometry
     });
 
+    tileCount ++;
     Map.addLayer(unitScale, {min: 0, max: 1}, 'unitscaled')
 
   }
@@ -126,9 +129,7 @@ for (var i = -6; i < 4; i++) // rows
     y1 -= 1.25;
     y2 -= 1.25;
 
-    break;
   }
   x1 -= 1.35;
-  x2 -= 1.35
-  break;
+  x2 -= 1.35;
 }
