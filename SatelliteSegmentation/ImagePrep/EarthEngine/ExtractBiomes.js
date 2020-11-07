@@ -43,11 +43,9 @@ var geometryAMA = ee.Geometry.Polygon([[
 
 // Caatinga
 var geometryCAT = ee.Geometry.Polygon([[
-  [-70.80975401310168, -20.519994257183307],  // BL point
-  [-30.93634092716418, -20.519994257183307],  // BR point
-  [-30.93634092716418, -0.617795520325061],  // TL point
-  [-70.80975401310168, -0.617795520325061],  // TR point
-  [-70.80975401310168, -8.519994257183307]   // BL point
+  [-43, -16],  // BL point
+  [-35.5, -9],  // TR point
+  [-43, -3],  // TL point
   ]]);
 
 //Cerrado
