@@ -49,7 +49,7 @@ def plot_group(biome):
         fig.add_subplot(rows, columns, i)
         plt.axis('off')
         plt.imshow(img)
-    plt.savefig(os_dir + biome + '/all_classes.png')
+    plt.savefig(os_dir + biome + '/' + biome + '_classes.png')
     plt.show()
 
 # Takes in the band of an image and saves the matrix
