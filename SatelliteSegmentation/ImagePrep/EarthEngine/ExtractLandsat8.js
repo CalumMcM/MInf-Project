@@ -3,31 +3,9 @@
 // PATH = horizontal (longitude)
 // ROW = vertical (latitude)
 
-var row = 60
-var path = 231
-
-var geometryAMA = ee.Geometry.Polygon([[
-  [-68, -9],  // BL point
-  [-66, -9],
-  [-58, -15],
-  [-50, -9],  // BR point
-  [-49, -1],  // TR point
-  [-68, -1],  // TL point
-  [-68, -9]   // BL point
-  ]]);
-
-Map.addLayer(geometryAMA);
-
-var tileCount = 1;
-
-// Make a list of features using a for loop
-var features = [];
-var images = [];
-// Get Landsat image for those co-ordinates
-
 // Takes in a row and path and returns the normalised
 // version of the image with the least amount of cloud cover
-function addImage(geometry, biome, type, scale, maxPixels)
+function addImage(geometry, biome, tileCount, type, scale, maxPixels)
 {
   try
   {
@@ -45,9 +23,6 @@ function addImage(geometry, biome, type, scale, maxPixels)
     // Extract first image from collection
     var image = dataset.first();
 
-    //image = image.clip(geometry)
-
-    print (image)
     // calculate the min and max value of an image
     var minMax = image.reduceRegion({
       reducer: ee.Reducer.minMax(),
@@ -75,8 +50,6 @@ function addImage(geometry, biome, type, scale, maxPixels)
                      "double":unitScale.toDouble()
                     }
 
-    var id = unitScale.id().getInfo();
-
     Export.image.toDrive({
       image: unitScale,
       description: tileCount.toString(),
@@ -85,8 +58,9 @@ function addImage(geometry, biome, type, scale, maxPixels)
       region: geometry
     });
 
-    tileCount ++;
     Map.addLayer(unitScale, {min: 0, max: 1}, 'unitscaled')
+
+    print (tileCount);
 
   }
   catch(err)
@@ -96,40 +70,128 @@ function addImage(geometry, biome, type, scale, maxPixels)
   }
 }
 
+function ExtractAmazonia(){
 
+  var row = 60
+  var path = 231
 
-Map.setCenter(-54, -2, 10);
-
-var x1 = -54
-var x2 = -53.99
-
-
-for (var i = -6; i < 4; i++) // rows
-{
-  var y1 = -2
-  var y2 = -1.99
-
-  for (var j = 2; j < 6; j++) // path
-  {
-    /*
-    P4: [x1, y2] P3: [x2, y2]
-    P1: [x1, y1] P2: [x2, y1]
-    */
-    var sliding_geometry = ee.Geometry.Polygon([[
-    [x1, y1],  // P1
-    [x2, y1],  // P2
-    [x2, y2],  // P3
-    [x1, y2],  // P4
+  var geometryAMA = ee.Geometry.Polygon([[
+    [-68, -9],  // BL point
+    [-66, -9],
+    [-58, -15],
+    [-50, -9],  // BR point
+    [-49, -1],  // TR point
+    [-68, -1],  // TL point
+    [-68, -9]   // BL point
     ]]);
 
-    Map.addLayer(sliding_geometry, {color: 'FF0000'});
+  Map.addLayer(geometryAMA);
 
-    addImage(sliding_geometry, "Amazonia");
+  var tileCount = 1;
 
-    y1 -= 1.25;
-    y2 -= 1.25;
+  // Make a list of features using a for loop
+  var features = [];
+  var images = [];
+  // Get Landsat image for those co-ordinates
 
+  Map.setCenter(-54, -2, 10);
+
+  var x1 = -54
+  var x2 = -53.99
+
+
+  for (var i = -6; i < 4; i++) // columns
+  {
+    var y1 = -2
+    var y2 = -1.99
+
+    for (var j = 2; j < 6; j++) // path
+    {
+      /*
+      P4: [x1, y2] P3: [x2, y2]
+      P1: [x1, y1] P2: [x2, y1]
+      */
+      var sliding_geometry = ee.Geometry.Polygon([[
+      [x1, y1],  // P1
+      [x2, y1],  // P2
+      [x2, y2],  // P3
+      [x1, y2],  // P4
+      ]]);
+
+      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+
+      addImage(sliding_geometry, "Amazonia", tileCount);
+
+      tileCount ++;
+      y1 -= 1.25;
+      y2 -= 1.25;
+
+    }
+    x1 -= 1.35;
+    x2 -= 1.35;
   }
-  x1 -= 1.35;
-  x2 -= 1.35;
 }
+
+function ExtractCaatinga(){
+
+  var row = 60
+  var path = 231
+
+  // Caatinga
+  var geometryCAT = ee.Geometry.Polygon([[
+    [-43, -16],  // BL point
+    [-35.5, -9],  // TL point
+    [-43, -3],  // TR point
+    ]]);
+
+  Map.addLayer(geometryCAT);
+
+  var tileCount = 1;
+
+  // Make a list of features using a for loop
+  var features = [];
+  var images = [];
+  // Get Landsat image for those co-ordinates
+
+  Map.setCenter(-38, -9, 6);
+
+  var x1 = -42
+  var x2 = -41.99
+
+  var num_rows = 10;
+  for (var i = 0; i < 5; i++) // columns
+  {
+
+    var y1 = -3.8 - (i*1.25);
+    var y2 = -3.79 - (i*1.25);
+
+    for (var j = 0; j < num_rows; j++) // rows
+    {
+      /*
+      P4: [x1, y2] P3: [x2, y2]
+      P1: [x1, y1] P2: [x2, y1]
+      */
+      var sliding_geometry = ee.Geometry.Polygon([[
+      [x1, y1],  // P1
+      [x2, y1],  // P2
+      [x2, y2],  // P3
+      [x1, y2],  // P4
+      ]]);
+
+      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+
+      addImage(sliding_geometry, "Caatinga", tileCount);
+
+      tileCount ++;
+      y1 -= 1.25;
+      y2 -= 1.25;
+
+    }
+    x1 += 0.5;
+    x2 += 0.5;
+
+    num_rows -= 2;
+  }
+}
+
+ExtractCaatinga();
