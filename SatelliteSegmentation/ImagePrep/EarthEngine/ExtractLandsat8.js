@@ -72,9 +72,6 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
 
 function ExtractAmazonia(){
 
-  var row = 60
-  var path = 231
-
   var geometryAMA = ee.Geometry.Polygon([[
     [-68, -9],  // BL point
     [-66, -9],
@@ -134,9 +131,6 @@ function ExtractAmazonia(){
 
 function ExtractCaatinga(){
 
-  var row = 60
-  var path = 231
-
   // Caatinga
   var geometryCAT = ee.Geometry.Polygon([[
     [-43, -16],  // BL point
@@ -194,4 +188,66 @@ function ExtractCaatinga(){
   }
 }
 
-ExtractCaatinga();
+function ExtractCerrado(){
+
+  //Cerrado
+  var geometryCER = ee.Geometry.Polygon([[
+    [-58, -15],  //  point 1
+    [-52, -17],  //  point2
+    [-58, -20],  //  point2
+    [-42, -20],
+    [-42, -3],  // TR point
+    [-52, -13.5],  // TL point
+    ]]);
+
+  Map.addLayer(geometryCER);
+
+  var tileCount = 1;
+
+  // Make a list of features using a for loop
+  var features = [];
+  var images = [];
+  // Get Landsat image for those co-ordinates
+
+  Map.setCenter(-49, -14, 5);
+
+  var x1 = -44
+  var x2 = -43.99
+
+  var num_rows = 10;
+  for (var i = 0; i < 5; i++) // columns
+  {
+
+    var y1 = -7.5 - (i*1.25);
+    var y2 = -7.49 - (i*1.25);
+
+    for (var j = 0; j < num_rows; j++) // rows
+    {
+      /*
+      P4: [x1, y2] P3: [x2, y2]
+      P1: [x1, y1] P2: [x2, y1]
+      */
+      var sliding_geometry = ee.Geometry.Polygon([[
+      [x1, y1],  // P1
+      [x2, y1],  // P2
+      [x2, y2],  // P3
+      [x1, y2],  // P4
+      ]]);
+
+      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+
+      addImage(sliding_geometry, "Cerrado", tileCount);
+
+      tileCount ++;
+      y1 -= 1.25;
+      y2 -= 1.25;
+
+    }
+    x1 -= 0.5;
+    x2 -= 0.5;
+
+    num_rows -= 2
+  }
+}
+
+ExtractCerrado();
