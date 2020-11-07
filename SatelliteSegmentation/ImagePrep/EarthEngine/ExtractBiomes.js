@@ -50,13 +50,16 @@ var geometryCAT = ee.Geometry.Polygon([[
 
 //Cerrado
 var geometryCER = ee.Geometry.Polygon([[
-  [-58, -15],  //  point 1
-  [-52, -17],  //  point2
-  [-58, -20],  //  point2
-  [-42, -20],
-  [-42, -3],  // TR point
-  [-52, -13.5],  // TL point
-  ]]);
+    [-58, -16],  //  point 1
+    [-52, -17],  //  point2
+    [-58, -20],  //  point2
+    [-42, -20],
+    [-42, -3],  // TR point
+    [-49, -8],
+    [-52, -13.5],
+    [-59, -11.5],
+    [-60, -16]
+    ]]);
 
 // Get the moisac
 var mosaicCER = ee.ImageCollection(asset)
