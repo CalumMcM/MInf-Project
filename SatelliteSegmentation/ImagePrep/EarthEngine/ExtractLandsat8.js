@@ -13,10 +13,11 @@ function ndvi(image){
   // NDVI = (NIR-RED)/(NIR+RED)
   var result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
 
-  var ndviMean = ee.Number(result.reduceRegion(ee.Reducer.mean()))
+  var ndviMean = result.reduceRegion(ee.Reducer.mean()).get('NDVI')
+
   //print ('NDVI Mean: ', parseInt(JSON.parse(ndviMean)))
 
-  NDVIs.push(ndviMean)
+  caatingaNDVIs.push(ndviMean)
 
   var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
@@ -28,7 +29,7 @@ function ndvi(image){
 }
 // Takes in a row and path and returns the normalised
 // version of the image with the least amount of cloud cover
-function addImage(geometry, biome, tileCount, type, scale, maxPixels)
+function processImage(geometry, biome, tileCount, type, scale, maxPixels)
 {
   try
   {
@@ -75,6 +76,8 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
                     }
 
     image = image.clip(geometry);
+
+    // For processing an NDVI image
     image = ndvi(image);
 
     //imageRGB = image.select(['B3', 'B2', 'B1'])
@@ -87,9 +90,12 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
       region: geometry
     });
     */
-    Map.addLayer(image)
+
+    //Map.addLayer(image)
 
     print (tileCount);
+
+    return (image)
 
   }
   catch(err)
@@ -100,6 +106,8 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
 }
 
 function ExtractAmazonia(){
+
+  var amazoniaCollection = [];
 
   var geometryAMA = ee.Geometry.Polygon([[
     [-68, -9],  // BL point
@@ -146,7 +154,9 @@ function ExtractAmazonia(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "AmazoniaNDVI", tileCount);
+      var image = processImage(sliding_geometry, "AmazoniaNDVI", tileCount);
+
+      amazoniaCollection.push(image)
 
       tileCount ++;
       y1 -= 1.25;
@@ -156,9 +166,13 @@ function ExtractAmazonia(){
     x1 -= 1.35;
     x2 -= 1.35;
   }
+
+  return (ee.ImageCollection(amazoniaCollection));
 }
 
 function ExtractCaatinga(){
+
+  var caatingaCollection = [];
 
   // Caatinga
   var geometryCAT = ee.Geometry.Polygon([[
@@ -203,7 +217,9 @@ function ExtractCaatinga(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "CaatingaNDVI", tileCount);
+      var image = processImage(sliding_geometry, "CaatingaNDVI", tileCount);
+
+      caatingaCollection.push(image);
 
       tileCount ++;
       y1 -= 1.25;
@@ -215,9 +231,13 @@ function ExtractCaatinga(){
 
     num_rows -= 2;
   }
+
+  return (ee.ImageCollection(caatingaCollection));
 }
 
 function ExtractCerrado(){
+
+  var cerradoCollection = [];
 
   //Cerrado
   var geometryCER = ee.Geometry.Polygon([[
@@ -265,7 +285,9 @@ function ExtractCerrado(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "CerradoNDVI", tileCount);
+      var image = processImage(sliding_geometry, "CerradoNDVI", tileCount);
+
+      cerradoCollection.push(image);
 
       tileCount ++;
       y1 -= 1.25;
@@ -278,8 +300,42 @@ function ExtractCerrado(){
     num_rows -= 2
 
   }
+
+  return (ee.ImageCollection(cerradoCollection));
 }
 
-var NDVIs = []
-ExtractCerrado();
-print (NDVIs)
+var caatingaNDVIs = []
+
+var caatingaBatch = ExtractCaatinga();
+
+var myFeatures = ee.FeatureCollection(caatingaBatch.map(function(el){
+  el = ee.List(el); // cast every element of the list
+  var geom = null;
+  return ee.Feature(geom, {
+    'NDVI': ee.Number(el.get(0))
+  });
+}));
+
+var caatingaNDVIsFC = ee.FeatureCollection([ee.Feature(null, {'NDVI': caatingaNDVIs})])
+
+
+// (caatingaNDVIs)
+
+//print (caatingaNDVIsFC)
+
+Map.addLayer(caatingaBatch)
+
+Export.table.toDrive({
+  collection: caatingaNDVIsFC,
+  description: 'Caatinga',
+  fileFormat: 'CSV',
+  folder: 'NDVI_Scores'
+});
+
+/*
+// Export a collection of images
+var batch = require('users/fitoprincipe/geetools:batch')
+batch.Download.ImageCollection.toDrive(caatingaBatch, 'caatingaBatch',
+                {scale: 100,
+                 type: 'float'})
+*/
