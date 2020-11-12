@@ -3,6 +3,24 @@
 // PATH = horizontal (longitude)
 // ROW = vertical (latitude)
 
+// Takes in an image and calculates the NDVI values for that image
+// then overlays a palette so that green = high NDVI and blue = low NDVI
+function ndvi(image){
+
+  var nir = image.select(['B4']);
+  var red = image.select(['B3']);
+
+  // NDVI = (NIR-RED)/(NIR+RED)
+  var result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
+
+  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
+
+  // Blue = low NDVI
+  // Green = high NDVI.
+  var blended = result.visualize(ndviParams)
+
+  return blended;
+}
 // Takes in a row and path and returns the normalised
 // version of the image with the least amount of cloud cover
 function addImage(geometry, biome, tileCount, type, scale, maxPixels)
@@ -22,6 +40,7 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
 
     // Extract first image from collection
     var image = dataset.first();
+
 
     // calculate the min and max value of an image
     var minMax = image.reduceRegion({
@@ -50,15 +69,20 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
                      "double":unitScale.toDouble()
                     }
 
+    image = image.clip(geometry);
+    image = ndvi(image);
+
+    //imageRGB = imageCLIP.select(['B3', 'B2', 'B1'])
+
     Export.image.toDrive({
-      image: unitScale,
+      image: image,
       description: tileCount.toString(),
       folder: biome,
       scale: 30,
       region: geometry
     });
 
-    Map.addLayer(unitScale, {min: 0, max: 1}, 'unitscaled')
+    Map.addLayer(image)
 
     print (tileCount);
 
@@ -117,7 +141,7 @@ function ExtractAmazonia(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "Amazonia", tileCount);
+      addImage(sliding_geometry, "AmazoniaNN", tileCount);
 
       tileCount ++;
       y1 -= 1.25;
@@ -236,7 +260,7 @@ function ExtractCerrado(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "Cerrado", tileCount);
+      addImage(sliding_geometry, "CerradoNDVI", tileCount);
 
       tileCount ++;
       y1 -= 1.25;
@@ -247,6 +271,7 @@ function ExtractCerrado(){
     x2 -= 0.5;
 
     num_rows -= 2
+
   }
 }
 
