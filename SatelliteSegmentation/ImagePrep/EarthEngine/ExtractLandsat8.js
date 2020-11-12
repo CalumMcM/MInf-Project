@@ -13,6 +13,11 @@ function ndvi(image){
   // NDVI = (NIR-RED)/(NIR+RED)
   var result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
 
+  var ndviMean = ee.Number(result.reduceRegion(ee.Reducer.mean()))
+  //print ('NDVI Mean: ', parseInt(JSON.parse(ndviMean)))
+
+  NDVIs.push(ndviMean)
+
   var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
   // Blue = low NDVI
@@ -72,8 +77,8 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
     image = image.clip(geometry);
     image = ndvi(image);
 
-    //imageRGB = imageCLIP.select(['B3', 'B2', 'B1'])
-
+    //imageRGB = image.select(['B3', 'B2', 'B1'])
+    /*
     Export.image.toDrive({
       image: image,
       description: tileCount.toString(),
@@ -81,7 +86,7 @@ function addImage(geometry, biome, tileCount, type, scale, maxPixels)
       scale: 30,
       region: geometry
     });
-
+    */
     Map.addLayer(image)
 
     print (tileCount);
@@ -141,7 +146,7 @@ function ExtractAmazonia(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "AmazoniaNN", tileCount);
+      addImage(sliding_geometry, "AmazoniaNDVI", tileCount);
 
       tileCount ++;
       y1 -= 1.25;
@@ -198,7 +203,7 @@ function ExtractCaatinga(){
 
       Map.addLayer(sliding_geometry, {color: 'FF0000'});
 
-      addImage(sliding_geometry, "Caatinga", tileCount);
+      addImage(sliding_geometry, "CaatingaNDVI", tileCount);
 
       tileCount ++;
       y1 -= 1.25;
@@ -275,4 +280,6 @@ function ExtractCerrado(){
   }
 }
 
+var NDVIs = []
 ExtractCerrado();
+print (NDVIs)
