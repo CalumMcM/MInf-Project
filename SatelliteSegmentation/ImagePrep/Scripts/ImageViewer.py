@@ -11,6 +11,8 @@ from osgeo import gdal
 from os import listdir
 from os.path import isfile, join
 import pandas as pd
+from sklearn.cluster import KMeans
+from scipy.spatial.distance import cdist
 
 #####################################################
 ########## SCRIPT TO DISPLAY A .GEOTIF IMG ##########
@@ -170,10 +172,7 @@ def plot_histogram(file_ama, file_cat, file_cer):
     del df_ama['.geo']
     df_ama.columns = ['Amazonia', 'Caatinga', 'Cerrado']
 
-    print (df_ama.columns)
-    #df_ama['NDVI'].round(decimals=3)
-
-    print (df_ama.columns)
+    knn(df_ama)
 
     ax = df_ama.plot.hist(bins=100, alpha=0.9)
     plt.title("Median NDVI Frequency per Biome")
@@ -181,6 +180,50 @@ def plot_histogram(file_ama, file_cat, file_cer):
     plt.xlabel('Median NDVI')
     plt.savefig('medianNDVIHistogram.png')
     plt.show()
+
+def euclidean_distance(row):
+    """
+    A simple euclidean distance function
+    """
+    inner_value = 0
+    for k in distance_columns:
+        inner_value += (row[k] - selected_player[k]) ** 2
+    return math.sqrt(inner_value)
+
+def kmeans(df):
+
+    #data = {'sample': df.Amazonia,
+    #        'class' : ['Amazonia']*len(df.Amazonia)}
+    X = df.Amazonia + df.Caatinga + df.Cerrado
+    X = X.replace([np.inf, -np.inf], np.nan)
+    X = X.dropna(axis=0)
+    X = np.array(X)
+    SecDim = np.zeros(len(X))
+    X = np.array(list(zip(X,SecDim)))
+
+    kmeans = KMeans(n_clusters=3, max_iter=600, algorithm = 'auto')
+    fitted = kmeans.fit(X)
+    prediction = kmeans.predict(X)
+
+    plt.figure(figsize = (10,8))
+
+    def plot_kmeans(kmeans, X, n_clusters=3, rseed=0, ax=None):
+        labels = kmeans.fit_predict(X)
+
+        # plot the input data
+        ax = ax or plt.gca()
+        ax.axis('equal')
+        ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+
+        # plot the representation of the KMeans model
+        centers = kmeans.cluster_centers_
+        radii = [cdist(X[labels == i], [center]).max()
+                 for i, center in enumerate(centers)]
+        for c, r in zip(centers, radii):
+            ax.add_patch(plt.Circle(c, r, fc='#CCCCCC', lw=3, alpha=0.5, zorder=1))
+
+    plot_kmeans(kmeans, X)
+
 
 if __name__ == "__main__":
 
