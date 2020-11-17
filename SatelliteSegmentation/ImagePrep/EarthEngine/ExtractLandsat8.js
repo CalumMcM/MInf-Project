@@ -15,9 +15,8 @@ function ndvi(image){
 
   var ndviMean = result.reduceRegion(ee.Reducer.mean()).get('NDVI')
 
-  //print ('NDVI Mean: ', parseInt(JSON.parse(ndviMean)))
 
-  caatingaNDVIs.push(ndviMean)
+  //cerradoNDVIs.push(ndviMean) //UNCOMMENTED FOR MAPPING
 
   var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
@@ -29,7 +28,7 @@ function ndvi(image){
 }
 // Takes in a row and path and returns the normalised
 // version of the image with the least amount of cloud cover
-function processImage(geometry, biome, tileCount, type, scale, maxPixels)
+function processImage(geometry, biome, type, scale, maxPixels)
 {
   try
   {
@@ -95,6 +94,8 @@ function processImage(geometry, biome, tileCount, type, scale, maxPixels)
 
     print (tileCount);
 
+    tileCount ++;
+
     return (image)
 
   }
@@ -119,56 +120,34 @@ function ExtractAmazonia(){
     [-68, -9]   // BL point
     ]]);
 
-  Map.addLayer(geometryAMA);
+  var random_points = 5;
 
-  var tileCount = 1;
+  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCAT,random_points, 0, 10);
 
-  // Make a list of features using a for loop
-  var features = [];
-  var images = [];
-  // Get Landsat image for those co-ordinates
+  var geometries = random_points_FC.map(getCoord)
 
-  Map.setCenter(-54, -2, 10);
+  var images = ee.ImageCollection(geometries.map(getImages, true))
 
-  var x1 = -54
-  var x2 = -53.99
+  var withNDVI = images.map(addNDVI);
 
+  // Visualise:
+  /*
+  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
-  for (var i = -6; i < 4; i++) // columns
-  {
-    var y1 = -2
-    var y2 = -1.99
+  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
 
-    for (var j = 2; j < 6; j++) // path
-    {
-      /*
-      P4: [x1, y2] P3: [x2, y2]
-      P1: [x1, y1] P2: [x2, y1]
-      */
-      var sliding_geometry = ee.Geometry.Polygon([[
-      [x1, y1],  // P1
-      [x2, y1],  // P2
-      [x2, y2],  // P3
-      [x1, y2],  // P4
-      ]]);
+  Map.centerObject(withNDVI.first(), 10)
+  Map.addLayer(blended)
+  */
 
-      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
 
-      var image = processImage(sliding_geometry, "AmazoniaNDVI", tileCount);
+  print ("MEAN NDVI'S:")
+  print (meanNDVIs)
 
-      amazoniaCollection.push(image)
-
-      tileCount ++;
-      y1 -= 1.25;
-      y2 -= 1.25;
-
-    }
-    x1 -= 1.35;
-    x2 -= 1.35;
-  }
-
-  return (ee.ImageCollection(amazoniaCollection));
+  return meanNDVIs
 }
+
 
 function ExtractCaatinga(){
 
@@ -181,59 +160,34 @@ function ExtractCaatinga(){
     [-43, -3],  // TR point
     ]]);
 
-  Map.addLayer(geometryCAT);
+  var random_points = 5;
 
-  var tileCount = 1;
+  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCAT,random_points, 0, 10);
 
-  // Make a list of features using a for loop
-  var features = [];
-  var images = [];
-  // Get Landsat image for those co-ordinates
+  var geometries = random_points_FC.map(getCoord)
 
-  Map.setCenter(-38, -9, 6);
+  var images = ee.ImageCollection(geometries.map(getImages, true))
 
-  var x1 = -42
-  var x2 = -41.99
+  var withNDVI = images.map(addNDVI);
 
-  var num_rows = 10;
-  for (var i = 0; i < 5; i++) // columns
-  {
+  // Visualise:
+  /*
+  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
-    var y1 = -3.8 - (i*1.25);
-    var y2 = -3.79 - (i*1.25);
+  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
 
-    for (var j = 0; j < num_rows; j++) // rows
-    {
-      /*
-      P4: [x1, y2] P3: [x2, y2]
-      P1: [x1, y1] P2: [x2, y1]
-      */
-      var sliding_geometry = ee.Geometry.Polygon([[
-      [x1, y1],  // P1
-      [x2, y1],  // P2
-      [x2, y2],  // P3
-      [x1, y2],  // P4
-      ]]);
+  Map.centerObject(withNDVI.first(), 10)
+  Map.addLayer(blended)
+  */
 
-      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
 
-      var image = processImage(sliding_geometry, "CaatingaNDVI", tileCount);
+  print ("MEAN NDVI'S:")
+  print (meanNDVIs)
 
-      caatingaCollection.push(image);
-
-      tileCount ++;
-      y1 -= 1.25;
-      y2 -= 1.25;
-
-    }
-    x1 += 0.5;
-    x2 += 0.5;
-
-    num_rows -= 2;
-  }
-
-  return (ee.ImageCollection(caatingaCollection));
+  return meanNDVIs
 }
+
 
 function ExtractCerrado(){
 
@@ -249,85 +203,99 @@ function ExtractCerrado(){
     [-52, -13.5],  // TL point
     ]]);
 
-  Map.addLayer(geometryCER);
+  var random_points = 1000;
 
-  var tileCount = 1;
+  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCER,random_points, 0, 10);
 
-  // Make a list of features using a for loop
-  var features = [];
-  var images = [];
-  // Get Landsat image for those co-ordinates
+  var geometries = random_points_FC.map(getCoord)
 
-  Map.setCenter(-49, -14, 5);
+  var images = ee.ImageCollection(geometries.map(getImages, true))
 
-  var x1 = -44
-  var x2 = -43.99
+  var withNDVI = images.map(addNDVI);
 
-  var num_rows = 10;
-  for (var i = 0; i < 5; i++) // columns
-  {
+  // Visualise:
+  /*
+  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
-    var y1 = -7.5 - (i*1.25);
-    var y2 = -7.49 - (i*1.25);
+  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
 
-    for (var j = 0; j < num_rows; j++) // rows
-    {
-      /*
-      P4: [x1, y2] P3: [x2, y2]
-      P1: [x1, y1] P2: [x2, y1]
-      */
-      var sliding_geometry = ee.Geometry.Polygon([[
-      [x1, y1],  // P1
-      [x2, y1],  // P2
-      [x2, y2],  // P3
-      [x1, y2],  // P4
-      ]]);
+  Map.centerObject(withNDVI.first(), 10)
+  Map.addLayer(blended)
+  */
 
-      Map.addLayer(sliding_geometry, {color: 'FF0000'});
+  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
 
-      var image = processImage(sliding_geometry, "CerradoNDVI", tileCount);
+  print ("MEAN NDVI'S:")
+  print (meanNDVIs)
 
-      cerradoCollection.push(image);
-
-      tileCount ++;
-      y1 -= 1.25;
-      y2 -= 1.25;
-
-    }
-    x1 -= 0.5;
-    x2 -= 0.5;
-
-    num_rows -= 2
-
-  }
-
-  return (ee.ImageCollection(cerradoCollection));
+  return meanNDVIs
 }
 
-var caatingaNDVIs = []
-
-var caatingaBatch = ExtractCaatinga();
-
-var myFeatures = ee.FeatureCollection(caatingaBatch.map(function(el){
-  el = ee.List(el); // cast every element of the list
-  var geom = null;
-  return ee.Feature(geom, {
-    'NDVI': ee.Number(el.get(0))
-  });
-}));
-
-var caatingaNDVIsFC = ee.FeatureCollection([ee.Feature(null, {'NDVI': caatingaNDVIs})])
+// Given a geometry point this returns a 1km (polygon) tile
+// with the given point being the bottom left corner
+var getCoord = function(feature, list) {
+  var x1 = feature.geometry().coordinates().get(0)
+  var y1 = feature.geometry().coordinates().get(1)
 
 
-// (caatingaNDVIs)
+  var x2 = ee.Number(0.01).add(x1)
+  var y2 = ee.Number(0.01).add(y1)
 
-//print (caatingaNDVIsFC)
+  var sliding_geometry = ee.Geometry.Polygon([[
+  [x1, y1],  // P1
+  [x2, y1],  // P2
+  [x2, y2],  // P3
+  [x1, y2],  // P4
+  ]]);
 
-Map.addLayer(caatingaBatch)
+  return ee.Feature(sliding_geometry)
+};
+
+// Given a polygon geometry this returns a clipped
+// Landsat 7 image of that geometry
+var getImages = function(feature) {
+  var geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
+  var centroid = feature.geometry().centroid();
+
+  var image = ee.ImageCollection('LANDSAT/LE07/C01/T1')
+                    .filterDate('1999-04-01', '2001-09-30') // April -> September
+                    .filterBounds(geo)
+                    .sort('CLOUD_COVER').first();
+
+  image = image.clip(geo)
+
+  return ee.Image(image);
+}
+
+// Extract the red and near-infrared bands from an image,
+// computes the NDVI band and appends it to the image
+var addNDVI = function(image) {
+  var nir = image.select(['B4']);
+  var red = image.select(['B3']);
+
+  // NDVI = (NIR-RED)/(NIR+RED)
+  var result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
+  // Blue = low NDVI  &&  Green = high NDVI
+  return image.addBands(result);
+};
+
+// Returns the mean NDVI for an image
+var meanNDVI = function(image) {
+    var ndvi = image.select('NDVI')
+
+    var ndviMean = ndvi.reduceRegion(ee.Reducer.mean()).get('NDVI')
+
+    return ee.Feature(null, {'NDVI': ndviMean})
+}
+
+
+
+// Extract mean NDVIs for cerrado
+var meanNDVIs = ExtractCerrado();
 
 Export.table.toDrive({
-  collection: caatingaNDVIsFC,
-  description: 'Caatinga',
+  collection: meanNDVIs,
+  description: 'CaatingaBatch1000',
   fileFormat: 'CSV',
   folder: 'NDVI_Scores'
 });
