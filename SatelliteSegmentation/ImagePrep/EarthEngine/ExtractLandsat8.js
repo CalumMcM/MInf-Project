@@ -3,29 +3,6 @@
 // PATH = horizontal (longitude)
 // ROW = vertical (latitude)
 
-// Takes in an image and calculates the NDVI values for that image
-// then overlays a palette so that green = high NDVI and blue = low NDVI
-function ndvi(image){
-
-  var nir = image.select(['B4']);
-  var red = image.select(['B3']);
-
-  // NDVI = (NIR-RED)/(NIR+RED)
-  var result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
-
-  var ndviMean = result.reduceRegion(ee.Reducer.mean()).get('NDVI')
-
-
-  //cerradoNDVIs.push(ndviMean) //UNCOMMENTED FOR MAPPING
-
-  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
-
-  // Blue = low NDVI
-  // Green = high NDVI.
-  var blended = result.visualize(ndviParams)
-
-  return blended;
-}
 // Takes in a row and path and returns the normalised
 // version of the image with the least amount of cloud cover
 function processImage(geometry, biome, type, scale, maxPixels)
@@ -106,129 +83,49 @@ function processImage(geometry, biome, type, scale, maxPixels)
   }
 }
 
-function ExtractAmazonia(){
+// Given a biomes geometry this function will extract either the NDVI
+// data or the BGR images - based on the flag BGR_images - for each
+// tile in the image
+function ExtractBiome(biomeGeometry, geometry_colour, biome, BGR_images){
 
-  var amazoniaCollection = [];
-
-  var geometryAMA = ee.Geometry.Polygon([[
-    [-68, -9],  // BL point
-    [-66, -9],
-    [-58, -15],
-    [-50, -9],  // BR point
-    [-49, -1],  // TR point
-    [-68, -1],  // TL point
-    [-68, -9]   // BL point
-    ]]);
-
-  var random_points = 5;
-
-  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCAT,random_points, 0, 10);
-
-  var geometries = random_points_FC.map(getCoord)
-
-  var images = ee.ImageCollection(geometries.map(getImages, true))
-
-  var withNDVI = images.map(addNDVI);
-
-  // Visualise:
-  /*
-  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
-
-  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
-
-  Map.centerObject(withNDVI.first(), 10)
-  Map.addLayer(blended)
-  */
-
-  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
-
-  print ("MEAN NDVI'S:")
-  print (meanNDVIs)
-
-  return meanNDVIs
-}
-
-
-function ExtractCaatinga(){
-
-  var caatingaCollection = [];
-
-  // Caatinga
-  var geometryCAT = ee.Geometry.Polygon([[
-    [-43, -16],  // BL point
-    [-35.5, -9],  // TL point
-    [-43, -3],  // TR point
-    ]]);
-
-  var random_points = 5;
-
-  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCAT,random_points, 0, 10);
-
-  var geometries = random_points_FC.map(getCoord)
-
-  var images = ee.ImageCollection(geometries.map(getImages, true))
-
-  var withNDVI = images.map(addNDVI);
-
-  // Visualise:
-  /*
-  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
-
-  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
-
-  Map.centerObject(withNDVI.first(), 10)
-  Map.addLayer(blended)
-  */
-
-  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
-
-  print ("MEAN NDVI'S:")
-  print (meanNDVIs)
-
-  return meanNDVIs
-}
-
-
-function ExtractCerrado(){
-
-  var cerradoCollection = [];
-
-  //Cerrado
-  var geometryCER = ee.Geometry.Polygon([[
-    [-58, -15],  //  point 1
-    [-52, -17],  //  point2
-    [-58, -20],  //  point2
-    [-42, -20],
-    [-42, -3],  // TR point
-    [-52, -13.5],  // TL point
-    ]]);
+  // Add geomtry area to Google Earth Engine
+  Map.addLayer(biomeGeometry, {color: geometry_colour}, biome);
 
   var random_points = 1000;
 
-  var random_points_FC = ee.FeatureCollection.randomPoints(geometryCER,random_points, 0, 10);
+  // Get Feature Collection of random points within biome geometry
+  var random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, random_points, 0, 10);
+
+  Map.addLayer(random_points_FC);
 
   var geometries = random_points_FC.map(getCoord)
 
   var images = ee.ImageCollection(geometries.map(getImages, true))
 
-  var withNDVI = images.map(addNDVI);
+  // If BGR_images flag is false then extract NDVI data from each image tile
+  if (!BGR_images){
 
-  // Visualise:
-  /*
-  var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
+      var withNDVI = images.map(addNDVI);
 
-  var blended = withNDVI.first().select('NDVI').visualize(ndviParams)
+      /* TO ADD EACH NDVI IMAGE TO THE MAP */
+      var ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
 
-  Map.centerObject(withNDVI.first(), 10)
-  Map.addLayer(blended)
-  */
+      Map.addLayer(withNDVI.select('NDVI'),
+                 {min: -1, max: 1, palette: ['blue', 'white', 'green']},
+                 'NDVI classification');
+      /**/
 
-  var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
+      var meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI));
 
-  print ("MEAN NDVI'S:")
-  print (meanNDVIs)
+      return meanNDVIs
+  }
+  else {
 
-  return meanNDVIs
+    var imagesBGR = images.map(getBGR);
+
+    return imagesBGR;
+
+  }
 }
 
 // Given a geometry point this returns a 1km (polygon) tile
@@ -258,9 +155,9 @@ var getImages = function(feature) {
   var centroid = feature.geometry().centroid();
 
   var image = ee.ImageCollection('LANDSAT/LE07/C01/T1')
-                    .filterDate('1999-04-01', '2001-09-30') // April -> September
+                    .filterDate('2000-09-30', '2001-04-01') // September -> April
                     .filterBounds(geo)
-                    .sort('CLOUD_COVER').first();
+                    .sort('CLOUD_COVER', true).first();
 
   image = image.clip(geo)
 
@@ -279,31 +176,76 @@ var addNDVI = function(image) {
   return image.addBands(result);
 };
 
-// Returns the mean NDVI for an image
+// Returns the median NDVI for an image
 var meanNDVI = function(image) {
     var ndvi = image.select('NDVI')
 
-    var ndviMean = ndvi.reduceRegion(ee.Reducer.mean()).get('NDVI')
+    var ndviMean = ndvi.reduceRegion(ee.Reducer.median()).get('NDVI')
 
     return ee.Feature(null, {'NDVI': ndviMean})
 }
 
+var getBGR = function(image) {
+  return image.select(['B1', 'B2', 'B3']);
+};
+
+
+
+// Geometry for Caatinga biome
+var geometryCAT = ee.Geometry.Polygon([[
+  [-43, -16],
+  [-35.5, -9],
+  [-43, -3],
+  ]]);
+
+// Geometry for Cerrado biome
+var geometryCER = ee.Geometry.Polygon([[
+  [-58, -15],
+  [-52, -17],
+  [-58, -20],
+  [-42, -20],
+  [-42, -3],
+  [-52, -13.5],
+  ]]);
+
+var geometryAMA = ee.Geometry.Polygon([[
+    [-68, -9],
+    [-66, -9],
+    [-58, -15],
+    [-50, -9],
+    [-49, -1],
+    [-68, -1],
+    [-68, -9]
+    ]]);
+
+var landsat = ee.ImageCollection('LANDSAT/LE07/C01/T1')
+                    .filterDate('2001-04-01', '2001-09-30') // April -> September
+                    .filterBounds(geometryAMA).sort('CLOUD_COVER', true).first();
+// Extract Caatigna
+var biomeCaatinga = ExtractBiome(geometryCAT, '32a83a', 'Caatinga', true)
+var biomeCerrado = ExtractBiome(geometryCER, '324ca8', 'Cerrado', true)
+var biomeAmazonia = ExtractBiome(geometryAMA, 'FF0000', 'Amazonia', true)
+
+Map.addLayer(biomeCaatinga, {bands: ['B3', 'B2', 'B1']});
+
+
+// Export a collection of images
+var batch = require('users/fitoprincipe/geetools:batch')
+batch.Download.ImageCollection.toDrive(biomeCaatinga, 'biomeCaatinga',
+                {scale: 100,
+                 type: 'float'})
+
 
 
 // Extract mean NDVIs for cerrado
-var meanNDVIs = ExtractCerrado();
+//var medianNDVIs = ExtractCaatinga(false);
 
+
+/*
 Export.table.toDrive({
-  collection: meanNDVIs,
-  description: 'CaatingaBatch1000',
+  collection: medianNDVIs,
+  description: 'CerradoMedianNDVI1000Summer',
   fileFormat: 'CSV',
   folder: 'NDVI_Scores'
 });
-
-/*
-// Export a collection of images
-var batch = require('users/fitoprincipe/geetools:batch')
-batch.Download.ImageCollection.toDrive(caatingaBatch, 'caatingaBatch',
-                {scale: 100,
-                 type: 'float'})
 */
