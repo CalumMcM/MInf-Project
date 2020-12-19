@@ -22,33 +22,56 @@ def getCoord(feature):
 
   return ee.Feature(sliding_geometry)
 
+
 # Given a polygon geometry this returns a clipped
 # Landsat 7 image of that geometry
 def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LE07/C01/T1').filterDate('2000-10-01', '2001-04-01').filterBounds(geo).sort('CLOUD_COVER', True).first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LE07/C01/T1').filterDate('2002-04-01', '2002-10-01').filterBounds(geo).sort('CLOUD_COVER', True).first(); # September -> April
 
   image = image.clip(geo)
 
   return ee.Image(image)
 
+
+# Returns an image with only the Blue, Green and Red bands
 def getBGR (image):
   return image.select(['B1', 'B2', 'B3'])
+
+
+# Extracts the red and near-infrared bands from an image
+# and computes the NDVI band, appending it to the returned image
+def addNDVI(image):
+  nir = image.select(['B4']);
+  red = image.select(['B3']);
+
+  # NDVI = (NIR-RED)/(NIR+RED)
+  result = image.normalizedDifference(['B4', 'B3']).rename('NDVI');
+
+  return image.addBands(result);
+
+
+# Returns the mean NDVI score for a given image
+def meanNDVI(image):
+
+    ndvi = image.select('NDVI')
+
+    ndviMean = ndvi.reduceRegion(ee.Reducer.median()).get('NDVI')
+
+    return ee.Feature(None, {'NDVI': ndviMean})
 
 # Given a biomes geometry this function will extract either the NDVI
 # data or the BGR images - based on the flag BGR_images - for each
 # tile in the image
-def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, i):
+def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, seed, num_points):
 
     # Add geomtry area to Google Earth Engine
     #Map.addLayer(biomeGeometry, {color: geometry_colour}, biome);
 
-    random_points = 1;
-
     # Get Feature Collection of random points within biome geometry
-    random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, random_points, i, 10)
+    random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, num_points, seed, 10)
 
     #Map.addLayer(random_points_FC);
 
@@ -79,6 +102,7 @@ def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, i):
 
         return imagesBGR.first();
 
+
 # Export the given image to the Google drive in the
 # folder named folder with the given file name
 def export(image, folder, fileName):
@@ -94,7 +118,28 @@ def export(image, folder, fileName):
 
         status = task.status()['state']
 
-        print ("BIOME: " + folder + "\tIMAGE: "+ str(fileName) + "\tSTATUS: " + str(status))
+        print ("BIOME: " + folder + "\tIMAGE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+
+        time.sleep(10)
+
+
+# Export the given image to the Google drive in the
+# folder named folder with the given file name
+def exportTable(table, folder, fileName):
+
+    task = ee.batch.Export.table.toDrive(collection=table,
+                                        folder=folder,
+                                        fileNamePrefix=str(fileName),
+                                        fileFormat='CSV')
+    task.start()
+
+    status = task.status()['state']
+
+    while (status != 'COMPLETED' and status != 'FAILED'):
+
+        status = task.status()['state']
+
+        print ("BIOME: " + folder + "\tIMAGE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
         time.sleep(10)
 
@@ -103,23 +148,62 @@ def export(image, folder, fileName):
 # to the google drive
 def main():
 
-    N = 2
+    imgType = "NDVI"
 
-    for i in range(0,N):
+    # Calculate geometries for each biome
+    geometryTrainCER = geometryCER().difference(geometryTestCER(), 10);
+    geometryTrainAMA = geometryAMA().difference(geometryTestAMA(), 10);
+    geometryTrainCAT = geometryCAT().difference(geometryTestCAT(), 10);
 
-        geometryTrainCER = geometryCER().difference(geometryTestCER(), 10);
-        geometryTrainAMA = geometryAMA().difference(geometryTestAMA(), 10);
-        geometryTrainCAT = geometryCAT().difference(geometryTestCAT(), 10);
+    # Extract RGB
+    if imgType == "RGB":
 
-        biomeCaatinga = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', True, i)
-        biomeCerrado = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', True, i)
-        biomeAmazonia = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', True, i)
+        # Number of total tiles to extract per biome
+        N = 2
 
-        #help(batch.Export.imagecollection.toDrive)
+        # Only extract 1 tile for each biome at a time
+        num_points = 1
 
-        export(biomeCaatinga, 'Caatinga', i)
-        export(biomeCerrado, 'Cerrado', i)
-        export(biomeAmazonia, 'Caatinga', i)
+        for i in range(0,N):
+
+
+            biomeCaatinga = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', True, i, num_points)
+            biomeCerrado = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', True, i, num_points)
+            biomeAmazonia = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', True, i, num_points)
+
+            #help(batch.Export.imagecollection.toDrive)
+
+            export(biomeCaatinga, 'Caatinga', i)
+            export(biomeCerrado, 'Cerrado', i)
+            export(biomeAmazonia, 'Amazonia', i)
+
+    # Extract NDVI
+    else:
+
+        # Total number of tiles that will be extracted
+        N = 950
+
+        # Extract 1 tile for each biome at a time
+        num_points = 1
+
+        mainCaatingaFC = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', False, 0, num_points)
+        mainCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, 0, num_points)
+        mainAmazoniaFC = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', False, 0, num_points)
+
+        for i in range(1,N):
+
+            biomeCaatingaFC = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', False, i, num_points)
+            biomeCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, i, num_points)
+            biomeAmazoniaFC = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', False, i, num_points)
+
+            mainCaatingaFC = mainCaatingaFC.merge(biomeCaatingaFC);
+            mainCerradoFC = mainCerradoFC.merge(biomeCerradoFC);
+            mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazoniaFC);
+
+        exportTable(mainCaatingaFC,  'NDVI_Scores', 'CaatingaNDVI'+str(N)+'Winter')
+        exportTable(mainCerradoFC,   'NDVI_Scores', 'CerradoNDVI'+str(N)+'Winter')
+        exportTable(mainAmazoniaFC,  'NDVI_Scores', 'AmazoniaNDVI'+str(N)+'Winter')
+
 
 # Geometry for Caatinga biome
 def geometryCAT():
