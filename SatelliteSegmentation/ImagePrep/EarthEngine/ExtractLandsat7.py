@@ -29,7 +29,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LE07/C01/T1').filterDate('2002-04-01', '2002-10-01').filterBounds(geo).sort('CLOUD_COVER', True).first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LE07/C01/T1').filterDate('2001-10-01', '2002-03-31').filterBounds(geo).sort('CLOUD_COVER', True).first(); # September -> April
 
   image = image.clip(geo)
 
@@ -61,6 +61,27 @@ def meanNDVI(image):
     ndviMean = ndvi.reduceRegion(ee.Reducer.median()).get('NDVI')
 
     return ee.Feature(None, {'NDVI': ndviMean})
+
+# Normalised the passed image
+def scale(image):
+  # calculate the min and max value of an image
+  minMax = image.reduceRegion( reducer= ee.Reducer.minMax(),
+    geometry= image.geometry(),
+    scale= 30,
+    maxPixels= 10e9,
+    tileScale= 16 # Reduces image size making it exportable
+  );
+  def scaler(name):
+      name = ee.String(name)
+      band = image.select(name)
+      return band.unitScale(ee.Number(minMax.get(name.cat('_min'))), ee.Number(minMax.get(name.cat('_max'))))
+
+  # use unit scale to normalize the pixel values
+  unitScale = ee.ImageCollection.fromImages(
+    image.bandNames().map(scaler)).toBands().rename(image.bandNames());
+
+  return unitScale
+
 
 # Given a biomes geometry this function will extract either the NDVI
 # data or the BGR images - based on the flag BGR_images - for each
@@ -139,7 +160,7 @@ def exportTable(table, folder, fileName):
 
         status = task.status()['state']
 
-        print ("BIOME: " + folder + "\tIMAGE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+        print ("BIOME: " + folder + "\tTABLE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
         time.sleep(10)
 
@@ -148,7 +169,8 @@ def exportTable(table, folder, fileName):
 # to the google drive
 def main():
 
-    imgType = "NDVI"
+    season = "Summer"
+    imgType = "RGB"
 
     # Calculate geometries for each biome
     geometryTrainCER = geometryCER().difference(geometryTestCER(), 10);
@@ -171,11 +193,15 @@ def main():
             biomeCerrado = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', True, i, num_points)
             biomeAmazonia = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', True, i, num_points)
 
+            normCaatinga = scale(biomeCaatinga)
+            normCerrado  = scale(biomeCerrado)
+            normAmazonia = scale(biomeAmazonia)
+
             #help(batch.Export.imagecollection.toDrive)
 
-            export(biomeCaatinga, 'Caatinga', i)
-            export(biomeCerrado, 'Cerrado', i)
-            export(biomeAmazonia, 'Amazonia', i)
+            export(normCaatinga, 'CaatingaT', i)
+            export(normCerrado, 'CerradoT', i)
+            export(normAmazonia, 'AmazoniaT', i)
 
     # Extract NDVI
     else:
@@ -190,7 +216,7 @@ def main():
         mainCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, 0, num_points)
         mainAmazoniaFC = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', False, 0, num_points)
 
-        for i in range(1,N):
+        for i in range(0,N):
 
             biomeCaatingaFC = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', False, i, num_points)
             biomeCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, i, num_points)
@@ -200,9 +226,10 @@ def main():
             mainCerradoFC = mainCerradoFC.merge(biomeCerradoFC);
             mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazoniaFC);
 
-        exportTable(mainCaatingaFC,  'NDVI_Scores', 'CaatingaNDVI'+str(N)+'Winter')
-        exportTable(mainCerradoFC,   'NDVI_Scores', 'CerradoNDVI'+str(N)+'Winter')
-        exportTable(mainAmazoniaFC,  'NDVI_Scores', 'AmazoniaNDVI'+str(N)+'Winter')
+
+        exportTable(mainCaatingaFC,  'NDVI_Scores', 'CaatingaNDVI'+str(N)+season)
+        exportTable(mainCerradoFC,   'NDVI_Scores', 'CerradoNDVI'+str(N)+season)
+        exportTable(mainAmazoniaFC,  'NDVI_Scores', 'AmazoniaNDVI'+str(N)+season)
 
 
 # Geometry for Caatinga biome
