@@ -66,21 +66,26 @@ def main():
     X, y = make_classification(n_samples=1000, n_features=10, n_informative=5, n_redundant=5, n_classes=3, random_state=1)
 
     X_train = np.array([[a] for a in X_train])
+    X_test = np.array([[a] for a in X_test])
 
     # Define the multinomial logistic regression model
     model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
 
-    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-
-    # evaluate the model and collect the scores
-    n_scores = cross_val_score(model, X_train, y_train, scoring='accuracy', cv=cv, n_jobs=-1)
-
-    # report the model performance
-    print('Mean Accuracy: %.3f (%.3f)' % (np.mean(n_scores), np.std(n_scores)))
-
     # Fit the model on the whole dataset
     model.fit(X_train, y_train)
 
+    # Get predictions of model on test data
+    preds = model.predict(X_test)
+
+    print (preds)
+    count = 0
+
+    # Compare predictions to actual values
+    for i in range(0,len(preds)):
+        if preds[i] == y_test[i]:
+            count += 1
+
+    print ("ACCURACY: " + str((count/len(preds))*100))
 
 
 if __name__ == "__main__":
