@@ -1,6 +1,36 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from geetools import batch
+import argparse
 import ee
 import time
+
+# Returns false if the requested number of images (value)
+# is greater than 950 or less than 1
+def check_valid_req(value):
+    ivalue = int(value)
+    if ivalue > 950 or ivalue < 1:
+        raise argparse.ArgumentTypeError("%s is an invalid number of images" % value)
+    return ivalue
+
+# Returns a named tuple with arguments
+def get_args():
+
+    parser = argparse.ArgumentParser(
+        description='Welcome to the bulk LANDSAT 7 image extraction helper script')
+
+    parser.add_argument('--num_imgs', nargs="?", type=check_valid_req, default=1, help='Total number of images you wish to extract (Max 950)')
+
+    parser.add_argument('--seed', nargs="?", type=int, default=0,
+                        help='Initial seed that will be used for random feature point creation')
+    parser.add_argument('--outputType', nargs="?", type=str, default=0,
+                        help='\'RGB\' for RGB images and \'NDVI\' for NDVI images')
+
+    args = parser.parse_args()
+
+    print (args)
+
+    return args
 
 # Given a geometry point this returns a 1km (polygon) tile
 # with the given point being the bottom left corner
@@ -135,13 +165,15 @@ def export(image, folder, fileName):
 
     status = task.status()['state']
 
+    print ("BIOME: " + folder + "\tSEED: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+
     while (status != 'COMPLETED' and status != 'FAILED'):
 
         status = task.status()['state']
 
-        print ("BIOME: " + folder + "\tIMAGE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
-
         time.sleep(10)
+
+    print ("BIOME: " + folder + "\tSEED: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
 
 # Export the given image to the Google drive in the
@@ -156,21 +188,23 @@ def exportTable(table, folder, fileName):
 
     status = task.status()['state']
 
+    print ("BIOME: " + folder + "\tTABLE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+
     while (status != 'COMPLETED' and status != 'FAILED'):
 
         status = task.status()['state']
 
-        print ("BIOME: " + folder + "\tTABLE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
-
         time.sleep(10)
 
+    print ("BIOME: " + folder + "\tTABLE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
 # Creates N many images for each biome and exports them
 # to the google drive
 def main():
 
+    args = get_args()
+
     season = "Summer"
-    imgType = "RGB"
 
     # Create Amazonia train and test geometries
     # Train set
@@ -197,15 +231,15 @@ def main():
     geometryTestCAT = geometryCATQuad4();
 
     # Extract RGB
-    if imgType == "RGB":
+    if args.outputType == "RGB":
 
         # Number of total tiles to extract per biome
-        N = 2
+        N = args.seed+args.num_imgs
 
         # Only extract 1 tile for each biome at a time
         num_points = 1
 
-        for i in range(0,N):
+        for i in range(args.seed, N):
 
 
             biomeCaatinga = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', True, i, num_points)
@@ -218,37 +252,37 @@ def main():
 
             #help(batch.Export.imagecollection.toDrive)
 
-            export(normCaatinga, 'CaatingaT', i)
-            export(normCerrado, 'CerradoT', i)
-            export(normAmazonia, 'AmazoniaT', i)
+            export(normCaatinga, 'Caatinga', i)
+            export(normCerrado, 'Cerrado', i)
+            export(normAmazonia, 'Amazonia', i)
 
     # Extract NDVI
-    else:
+    elif args.outputType == "NDVI":
 
         # Total number of tiles that will be extracted
-        N = 950
+        N = args.seed+args.num_imgs
 
         # Extract 1 tile for each biome at a time
         num_points = 1
 
-        mainCaatingaFC = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', False, 0, num_points)
-        mainCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, 0, num_points)
-        mainAmazoniaFC = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', False, 0, num_points)
+        mainCaatingaFC = getBiomeImage(geometryTestCAT, '32a83a', 'Caatinga', False, 0, num_points)
+        mainCerradoFC = getBiomeImage(geometryTestCER, '324ca8', 'Cerrado', False, 0, num_points)
+        mainAmazoniaFC = getBiomeImage(geometryTestAMA, 'FF0000', 'Amazonia', False, 0, num_points)
 
-        for i in range(0,N):
+        for i in range(args.seed,N):
 
-            biomeCaatingaFC = getBiomeImage(geometryTrainCAT, '32a83a', 'Caatinga', False, i, num_points)
-            biomeCerradoFC = getBiomeImage(geometryTrainCER, '324ca8', 'Cerrado', False, i, num_points)
-            biomeAmazoniaFC = getBiomeImage(geometryTrainAMA, 'FF0000', 'Amazonia', False, i, num_points)
+            biomeCaatingaFC = getBiomeImage(geometryTestCAT, '32a83a', 'Caatinga', False, i, num_points)
+            biomeCerradoFC = getBiomeImage(geometryTestCER, '324ca8', 'Cerrado', False, i, num_points)
+            biomeAmazoniaFC = getBiomeImage(geometryTestAMA, 'FF0000', 'Amazonia', False, i, num_points)
 
             mainCaatingaFC = mainCaatingaFC.merge(biomeCaatingaFC);
             mainCerradoFC = mainCerradoFC.merge(biomeCerradoFC);
             mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazoniaFC);
 
 
-        exportTable(mainCaatingaFC,  'NDVI_Scores', 'CaatingaNDVI'+str(N)+season)
-        exportTable(mainCerradoFC,   'NDVI_Scores', 'CerradoNDVI'+str(N)+season)
-        exportTable(mainAmazoniaFC,  'NDVI_Scores', 'AmazoniaNDVI'+str(N)+season)
+        exportTable(mainCaatingaFC,  'Caatinga NDVI Test', str(args.seed))
+        exportTable(mainCerradoFC,   'Cerrado NDVI Test', str(args.seed))
+        exportTable(mainAmazoniaFC,  'Amazonia NDVI Test', str(args.seed))
 
 # Returns the quadrant area of the CERRADO biome
 def geometryCERQuad1():
