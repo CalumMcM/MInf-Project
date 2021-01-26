@@ -47,123 +47,173 @@ def get_triplet_imgs(img_dir, img_ext='.tif', n_triplets=1000):
     img_triplets = np.array(img_triplets)
     return img_triplets.reshape((-1, 2))
 
-def get_triplet_tiles_simple(tile_dir, img_dir, amazonia_img_triplets, cerrado_img_triplets, caatinga_img_triplets, num_triplets_per_biome, val_type='uint8', bands_only=False, save=True, verbose=False):
+def get_triplet_imgs_simple(img_dir, img_ext='.tif', n_triplets=1000):
+    """
+    Returns a numpy array of dimension (n_triplets, 2). First column is
+    the img name of anchor/neighbor tiles and second column is img name 
+    of distant tiles.
+    """
+    img_names = []
+    for filename in os.listdir(img_dir):
+        if filename.endswith(img_ext):
+            img_names.append(filename)
+    #img_triplets = list(map(lambda _: random.choice(img_names), range(2 * n_triplets)))
+    #img_triplets = np.array(img_triplets)
+    #return img_triplets.reshape((-1, 2))
+    return img_names
+
+def get_triplet_tiles_simple(tile_dir, img_dir, amazonia_img_triplets, cerrado_img_triplets, caatinga_img_triplets, num_triplets_per_biome=10, seed = 0, val_type='uint8', bands_only=False, save=True, verbose=False):
+    
+    np.random.seed(0)
     
     if not os.path.exists(tile_dir):
         os.makedirs(tile_dir)
     
+    cur_triplet_num = 0
+    
     for anchor in ['Amazonia', 'Cerrado', 'Caatinga']:
+        
+        print (anchor)
+        
+        unqiue_amazonia_img = np.unique(amazonia_img_triplets)
+        unqiue_cerrado_img = np.unique(cerrado_img_triplets)
+        unqiue_caatinga_img = np.unique(caatinga_img_triplets)
         
         if (anchor == 'Amazonia'):
 
             # Get unique anchor images
-            unique_anchor_imgs = np.unique(amazonia_img_triplets)
+            unique_anchor_imgs = unqiue_amazonia_img
 
             # Get unique neighbour images
             unique_neighbour_imgs = unique_anchor_imgs
 
             # Get distant neighbour images
-            unique_distant_imgs = np.concatenate([np.unique(cerrado_img_triplets), np.unique(caatinga_img_triplets)])
-        
+            unique_distant_imgs_1 = unqiue_cerrado_img
+            unique_distant_imgs_2 = unqiue_caatinga_img
+            
+            # Set distant image directories
+            dist_dir_1 = os.path.join(img_dir, 'Cerrado')
+            dist_dir_2 = os.path.join(img_dir, 'Caatinga')
+            
         elif (anchor == 'Cerrado'):
 
             # Get unique anchor images
-            unique_anchor_imgs = np.unique(cerrado_img_triplets)
+            unique_anchor_imgs = unqiue_cerrado_img
 
             # Get unique neighbour images
             unique_neighbour_imgs = unique_anchor_imgs
 
             # Get distant neighbour images
-            unique_distant_imgs = np.concatenate([np.unique(amazonia_img_triplets), np.unique(caatinga_img_triplets)])
-
+            unique_distant_imgs_1 = unqiue_amazonia_img
+            unique_distant_imgs_2 = unqiue_caatinga_img
+            
+            # Set distant image directories
+            dist_dir_1 = os.path.join(img_dir, 'Amazonia')
+            dist_dir_2 = os.path.join(img_dir, 'Caatinga')
 
         elif (anchor == 'Caatinga'):
 
             # Get unique anchor images
-            unique_anchor_imgs = np.unique(caatinga_img_triplets)
+            unique_anchor_imgs = unqiue_caatinga_img
 
             # Get unique neighbour images
             unique_neighbour_imgs = unique_anchor_imgs
 
             # Get distant neighbour images
-            unique_distant_imgs = np.concatenate([np.unique(cerrado_img_triplets), np.unique(amazonia_img_triplets)])
+            unique_distant_imgs_1 = unqiue_amazonia_img
+            unique_distant_imgs_2 = unqiue_cerrado_img
             
-
-        cur_triplet_num = 0
+            # Set distant image directories
+            dist_dir_1 = os.path.join(img_dir, 'Amazonia')
+            dist_dir_2 = os.path.join(img_dir, 'Cerrado')
+        
+        biome_triplet_counter = 0
         
         for anchor_img_name in unique_anchor_imgs:
-            
-            if cur_triplet_num >= num_triplets_per_biome: break
-            
-                
-            print("Sampling image {} for {} biome".format(anchor_img_name, anchor))
+
+            if biome_triplet_counter >= num_triplets_per_biome: break
+
+            if verbose:
+                print("Sampling image {} for {} biome".format(anchor_img_name, anchor))
 
             if anchor_img_name[-3:] == 'npy':
                 img = np.load(anchor_img_name)
             else:
 
                 anchor_dir = os.path.join(img_dir, anchor)
-                
+
                 # Convert bands of image
+
                 image_in = os.path.join(anchor_dir, anchor_img_name)
+                """
                 image_out = os.path.join("../data/scraps/", anchor_img_name)
-                    
+
                 subprocess.call(["gdal_translate", "-ot", "Byte", "-scale", "-of", "PNG", image_in, image_out]) 
-                    
+                """
                 # Load anchor image 
                 #anchor_img = load_rs_img(os.path.join(anchor_dir, anchor_img_name), val_type=val_type, 
-                anchor_img = load_rs_img(image_out, val_type=val_type, 
+                anchor_img = load_rs_img(image_in, val_type=val_type, 
                            bands_only=bands_only)
 
                 # Get neighbour image name
                 neighbour_img_name, unique_neighbour_imgs = get_random_image(anchor_img_name, unique_neighbour_imgs)
-                
+
                 # Convert bands of image
                 image_in = os.path.join(anchor_dir, neighbour_img_name)
+                """
                 image_out = os.path.join("../data/scraps/", neighbour_img_name)
-                    
-                
+
+
                 subprocess.call(["gdal_translate", "-ot", "Byte", "-scale", "-of", "PNG", image_in, image_out])                
-                
+                """
                 # Load neighbour image
-                neighbour_img = load_rs_img(image_out, val_type=val_type, 
+                neighbour_img = load_rs_img(image_in, val_type=val_type, 
                            bands_only=bands_only)
 
                 # Get distant image
-                distant_img_name, unique_distant_imgs = get_random_image("", unique_distant_imgs)
-                
+                distant_img_name, distant_dir, unique_distant_imgs_1, unique_distant_imgs_2 = get_random_distant_image(unique_distant_imgs_1, unique_distant_imgs_2, dist_dir_1, dist_dir_2)
+
+
                 # Convert bands of image
-                image_in = os.path.join(anchor_dir, distant_img_name)
+
+                image_in = os.path.join(distant_dir, distant_img_name)
+                """
                 image_out = os.path.join("../data/scraps/", distant_img_name)
-                    
+
                 subprocess.call(["gdal_translate", "-ot", "Byte", "-scale", "-of", "PNG", image_in, image_out])
-                
-                    
+                """
+
                 # Load distant image
-                distant_img = load_rs_img(image_out, val_type=val_type, 
+                distant_img = load_rs_img(image_in, val_type=val_type, 
                            bands_only=bands_only)
 
                 # Save triplet images as numpy arrays
                 if verbose:
-                        print("    Saving anchor, neighbor and distant tile #{}".format(cur_triplet_num))
+                        print("    Saving anchor, neighbor and distant tile #{} for biome {}".format(cur_triplet_num, anchor))
+                        print ("Anchor: {}\nNeighbour: {}\nDistant: {}".format(anchor_img_name, neighbour_img_name, distant_img_name))
+
                 if save:
-                    
+
                     tile_anchor =  np.swapaxes(anchor_img, 0, 2)#np.array(anchor_img)
                     tile_neighbour =  np.swapaxes(neighbour_img, 0, 2)#np.array(neighbour_img)
                     tile_distant =  np.swapaxes(distant_img, 0, 2)#np.array(distant_img)
-                    
-                    tile_anchor =  reset_shape(tile_anchor) 
-                    tile_neighbour =  reset_shape(tile_neighbour) 
-                    tile_distant = reset_shape(tile_distant)
-                    
-                    np.save(os.path.join(tile_dir, '{}anchor.npy'.format(cur_triplet_num)), tile_anchor)
-                    np.save(os.path.join(tile_dir, '{}neighbor.npy'.format(cur_triplet_num)), tile_neighbour)
-                    np.save(os.path.join(tile_dir, '{}distant.npy'.format(cur_triplet_num)), tile_distant)
 
+                    tile_anchor_1 =  reset_shape(tile_anchor)
+                    tile_neighbour_1 =  reset_shape(tile_neighbour)
+                    tile_distant_1 = reset_shape(tile_distant)
 
-                    #np.save(os.path.join(tile_dir, '{}neighbor.npy'.format(idx)), tile_neighbor)
-                
+                    tile_anchor_2 =  remove_nan(reset_shape(tile_anchor))
+                    tile_neighbour_2 =  remove_nan(reset_shape(tile_neighbour))
+                    tile_distant_2 = remove_nan(reset_shape(tile_distant))
+
+                    np.save(os.path.join(tile_dir, '{}anchor.npy'.format(cur_triplet_num)), tile_anchor_2)
+                    np.save(os.path.join(tile_dir, '{}neighbor.npy'.format(cur_triplet_num)), tile_neighbour_2)
+                    np.save(os.path.join(tile_dir, '{}distant.npy'.format(cur_triplet_num)), tile_distant_2)
+
                     cur_triplet_num += 1
+                    biome_triplet_counter += 1
+
+                    print ("BIOME {} progress: {:.2f}%".format(anchor, (biome_triplet_counter/len(unique_anchor_imgs)*100)))
 
 def reset_shape(tile):
     """
@@ -172,38 +222,106 @@ def reset_shape(tile):
     (51, 51, 3)
     """
     x, y, z = tile.shape
-    print (x)
-    print ("CUR SHAPE: " + str(tile.shape))
-    
+        
     # Reduce shape
-    if (x>51):
-        tile = np.delete(tile, -1, 0)
-        reset_shape(tile)
-    
-    if (y>51):
-        tile = np.delete(tile, -1, 1)
-        reset_shape(tile)
+    if (x == 51 and y == 51):
 
-    print ("NEW SHAPE: " + str(tile.shape))
+        return tile
+    
+    elif (x>51):
+        tile = np.delete(tile, -1, 0)
+        return reset_shape(tile)
+    
+    elif (y>51):
+        tile = np.delete(tile, -1, 1)
+        return reset_shape(tile)
 
     # Pad shape
-    return tile
-            
+    elif (x<51):
+
+        basic = np.array([tile[0]])
+
+        tile = np.vstack((tile, basic))
+        
+        return reset_shape(tile)
+    
+    elif (y < 51):
+                
+        mean = np.mean(tile)
+        new_col = np.full((51,1,3), mean)
+
+        tile = np.append(tile, new_col, axis=1)
+        
+        #tile = np.append(tile, basic, axis=1)
+                
+        return reset_shape(tile)
+
+def remove_nan(new_tile):
+    """
+    Takes a tile and replaces any nan values with the mean
+    of the image the nan appears in
+    """
+    
+    mean = np.nanmean(new_tile)
+    
+    new_tile = np.nan_to_num(new_tile, nan=mean, posinf=mean, neginf=mean)
+    
+    return new_tile
+
 def get_random_image(given_image, unique_imgs_array):
     """
-    Randomly selects an image from an array of iamges that is not the given image, 
+    Randomly selects an image from an array of images that is not the given image, 
     removes it from the array of images and returns that image name along 
     with the updated image array. This is to prevent the same image 
     being used twice. 
     """
     new_image = given_image
     while (new_image == given_image):
-        print (type(unique_imgs_array))
         new_image = random.sample(list(unique_imgs_array), k=1)[0]
     
     np.delete(unique_imgs_array, np.where(unique_imgs_array == new_image))
     
     return new_image, unique_imgs_array
+
+def get_random_distant_image(array_1, array_2, array_dir_1, array_dir_2):
+    """
+    Randomly selects an image, from one of two randomly selected arrays,
+    removes it from the array of images and returns that image name along 
+    with the updated image array. This is to prevent the same image 
+    being used twice. 
+    """
+    
+    if (len(array_1) <= 0):
+        
+        selected_array = 2
+    
+    elif (len(array_2) <= 0):
+        
+        selected_array = 1
+        
+    else:
+        
+        selected_array = random.randint(1,2)
+
+    if (selected_array == 1):
+
+        new_image = random.sample(list(array_1), k=1)[0]
+
+        np.delete(array_1, np.where(array_1 == new_image))
+        
+        image_dir = array_dir_1
+
+    else:
+
+        new_image = random.sample(list(array_2), k=1)[0]
+
+        np.delete(array_2, np.where(array_2 == new_image))
+        
+        image_dir = array_dir_2
+    
+    #print ("SELECTED ARRAY: " + str(selected_array))
+            
+    return new_image, image_dir, array_1, array_2
     
 def get_triplet_tiles(tile_dir, img_dir, img_triplets, tile_size=50, neighborhood=100, 
                       val_type='uint8', bands_only=False, save=True, verbose=False):
