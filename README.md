@@ -168,6 +168,30 @@ A biome is a geographical region containing diverse combinations of fauna and fl
     - Palm forests
     
     
+### Results
+
+Random Forest Classifier:
+
+| Model                              | Accuracy ± Std.Dev. | Macro Precision ± Std.Dev. | Macro Recall ± Std.Dev. | Macro F1-Score ± Std.Dev. |
+| ---------------------------------- | ------------------- | -------------------------- | ----------------------- | ------------------------- |
+| Tile2vec                           | 0.7878 ± 0.0060     | 0.7863 ± 0.0057            | 0.7874 ± 0.0057         | 0.7899 ± 0.0058           |
+| Tile2Vec<br /> Pre-trained on NAIP | 0.8686 ± 0.0053     | 0.8702 ± 0.0053            | 0.8685 ± 0.0052         | 0.8689 ± 0.0052           |
+| ResNet 18                          | 0.8812 ± 0.0043     | 0.8824 ± 0.0049            | 0.8811 ± 0.0048         | 0.8814 ± 0.0048           |
+| AlexNet                            | 0.9042 ± 0.0043     | 0.9056 ± 0.0042            | 0.9041 ± 0.0043         | 0.9043 ± 0.0043           |
+
+
+
+KNN where K is picked as optimal for all models
+
+| Model                              | Accuracy ± Std.Dev. | Macro Precision ± Std.Dev. | Macro Recall ± Std.Dev. | Macro F1-Score ± Std.Dev. |
+| ---------------------------------- | ------------------- | -------------------------- | ----------------------- | ------------------------- |
+| Tile2vec                           | 0.7878 ± 0.0060     | 0.7863 ± 0.0057            | 0.7874 ± 0.0057         | 0.7899 ± 0.0058           |
+| Tile2Vec<br /> Pre-trained on NAIP | 0.8453 ± 0.0049     | 0.8478± 0.0049             | 0.8451± 0.0049          | 0.8457± 0.0049            |
+| ResNet 18                          | 0.8812 ± 0.0043     | 0.8824 ± 0.0049            | 0.8811 ± 0.0048         | 0.8814 ± 0.0048           |
+| AlexNet                            | 0.9042 ± 0.0043     | 0.9056 ± 0.0042            | 0.9041 ± 0.0043         | 0.9043 ± 0.0043           |
+
+
+
 ### TODO
 
 - [ ] Get Images (lots of them)
