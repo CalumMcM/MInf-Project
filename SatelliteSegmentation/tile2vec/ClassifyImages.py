@@ -5,7 +5,6 @@ import pickle
 import numpy as np
 import rasterio as rs
 from PIL import Image
-from time import time
 from affine import Affine
 from matplotlib import cm
 from pyproj import Proj, transform
@@ -106,7 +105,7 @@ def generateTile(img):
 
     return processed_tile
 
-def compute_class(image_name, DIR, img2vec, z_dim, rf):
+def compute_class(image_name, DIR, img2vec, z_dim, rf, prob = False, threshold = 0):
     """
     Takes in the name of an image, converts it to a numpy tile
     and if the image is well formed (not NaN) then will embed it in
@@ -133,7 +132,21 @@ def compute_class(image_name, DIR, img2vec, z_dim, rf):
 
         tile_class = rf.predict([vectorized_tile])
 
-        return tile_class[0]
+        # If prob set to True then only images where the confidence is
+        # greater than or equal to the threshold, the class will be returned
+        if (prob == True):
+
+            tile_class_probs = rf.predict_proba([vectorized_tile])
+
+            tile_class_prob = tile_class_probs[0][tile_class[0]]
+
+            if (tile_class_prob >= threshold):
+                return tile_class[0]
+
+            else:
+                return -1
+        else:
+            return tile_class[0]
 
     else:
         return -1
@@ -172,12 +185,12 @@ def get_coord(img, DIR):
 
 def main():
     """
-    Given a direcotry to '.tif' images (DIR),
+    Given a directory (DIR) to '.tif' images,
     will loop through each image, vectorise it
     and compute the class it belongs to
     """
 
-    DIR = r'/Users/calummcmeekin/Documents/GitHub/MInf-Project/SatelliteSegmentation/tile2vec/data/Cross Section Quads/Quad 5/'
+    DIR = r'/Users/calummcmeekin/Documents/GitHub/MInf-Project/SatelliteSegmentation/tile2vec/data/Cross Section Quads/All Quads/'
 
     image_names = getImages(DIR)
 
@@ -197,11 +210,13 @@ def main():
     cat_FC = "var cat_fc = ee.FeatureCollection(["
 
     # Construct time for progress updates:
-    #start = time.process_time()
+    progress = 1
+    previous_percentage = 0
+    start = time.time()
 
     for image_name in image_names:
 
-        image_class = compute_class(image_name, DIR, img2vec, z_dim, rf)
+        image_class = compute_class(image_name, DIR, img2vec, z_dim, rf, True, 0.7)
 
         image_Feature = get_coord(image_name, DIR)
 
@@ -214,18 +229,29 @@ def main():
         elif image_class == 2:
             cat_FC += "\n" + image_Feature
 
+        if progress%100 == 0:
+
+            percentage_progress = progress/len(image_names) * 100
+            end = time.time()
+            time_remaining = ((end - start)/(percentage_progress-previous_percentage)) * (100-percentage_progress)
+
+            print ("PROGRESS: {:.2f} TIME REMAINING: {:.2f} seconds ".format(percentage_progress, time_remaining))
+            previous_percentage = percentage_progress
+            start = time.time()
+
+        progress += 1
 
     ama_FC +=  "\n]);"
     cer_FC +=  "\n]);"
     cat_FC +=  "\n]);"
 
-    print ("\n\nAmazonia Feature Collection:\n\n")
+    print ("\n\n\n")
     print (ama_FC)
 
-    print ("\n\nCerrado Feature Collection:\n\n")
+    print ("\n\n\n")
     print (cer_FC)
 
-    print ("\n\nCaatinga Feature Collection:\n\n")
+    print ("\n\n\n")
     print (cat_FC)
 
 if __name__ == "__main__":
