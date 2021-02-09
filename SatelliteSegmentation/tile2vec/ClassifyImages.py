@@ -144,7 +144,7 @@ def compute_class(image_name, DIR, img2vec, z_dim, rf, prob = False, threshold =
                 return tile_class[0]
 
             else:
-                return -1
+                return -2
         else:
             return tile_class[0]
 
@@ -190,7 +190,8 @@ def main():
     and compute the class it belongs to
     """
 
-    DIR = r'/Users/calummcmeekin/Documents/GitHub/MInf-Project/SatelliteSegmentation/tile2vec/data/Cross Section Quads/All Quads/'
+    DIR = r'/Users/calummcmeekin/Documents/GitHub/MInf-Project/SatelliteSegmentation/tile2vec/data/Caatinga Quads/Quad 3/'
+    #DIR = r'/Users/calummcmeekin/Documents/GitHub/MInf-Project/SatelliteSegmentation/tile2vec/data/Cross Section Quads/All Quads/'
 
     image_names = getImages(DIR)
 
@@ -201,13 +202,14 @@ def main():
     img2vec = Img2Vec(cuda=cuda)
 
     # Load the Random Forest Classifier
-    rf = pickle.load(open('models/full_rf.sav', 'rb'))
+    rf = pickle.load(open('models/rf.sav', 'rb'))
 
     # Construct Feature Collections for each biome for
     # Earth Engine
     ama_FC = "var ama_fc = ee.FeatureCollection(["
     cer_FC = "var cer_fc = ee.FeatureCollection(["
     cat_FC = "var cat_fc = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc = ee.FeatureCollection(["
 
     # Construct time for progress updates:
     progress = 1
@@ -229,6 +231,9 @@ def main():
         elif image_class == 2:
             cat_FC += "\n" + image_Feature
 
+        elif image_class == -2:
+            inconclusive_FC += "\n" + image_Feature
+
         if progress%100 == 0:
 
             percentage_progress = progress/len(image_names) * 100
@@ -244,6 +249,7 @@ def main():
     ama_FC +=  "\n]);"
     cer_FC +=  "\n]);"
     cat_FC +=  "\n]);"
+    inconclusive_FC +=  "\n]);"
 
     print ("\n\n\n")
     print (ama_FC)
@@ -253,6 +259,9 @@ def main():
 
     print ("\n\n\n")
     print (cat_FC)
+
+    print ("\n\n\n")
+    print (inconclusive_FC)
 
 if __name__ == "__main__":
     main()
