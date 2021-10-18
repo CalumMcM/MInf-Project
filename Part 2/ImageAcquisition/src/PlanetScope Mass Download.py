@@ -9,9 +9,10 @@ import gzip
 import numpy as np
 from os.path import *
 from os import listdir
+import pickle
 from rasterio.plot import show
 
-def get_mosaics():
+def get_mosaics(API_URL, session):
     # Arrays to hold a list of all start and end dates
     start_dates = []
     end_dates = []
@@ -27,6 +28,8 @@ def get_mosaics():
     start_dates.sort()
     end_dates.sort()
 
+    return start_dates, end_dates, mosaics
+
 def get_mosaic_id(start_date, mosaics):
     """
     Search and get the mosaic associated with the desired start date
@@ -34,10 +37,33 @@ def get_mosaic_id(start_date, mosaics):
     mosaic_id = ""
     for mosaic in mosaics["mosaics"]:
         if mosaic["first_acquired"] == start_date:
-            print (mosaic["bbox"])
-            print (mosaic)
             return mosaic["id"]
     return "ERROR"
+
+def get_quads_for_date(items, bbox_name):
+    """
+    For the first time each bbox is approached 20% of quads will be randomly selected for export
+    """
+
+    with open('selected_quads.pickle', 'rb') as file:
+        selected = pickle.load(file)
+
+        if bbox_name not in selected:
+            # Randomly extract 20% of quads in the geometry
+            selected[bbox_name] = np.random.choice(items, int(len(items)*0.2), replace=False)
+            selected_quads = selected[bbox_name]
+            file.close()
+
+            # Save new quads dictionary
+            with open('selected_quads.pickle', 'wb') as file:
+                pickle.dump(selected, file, protocol=pickle.HIGHEST_PROTOCOL)
+                file.close()
+
+        else:
+            selected_quads = selected[bbox_name]
+            file.close()
+
+    return selected_quads
 
 # todo: currently only takes first 50 images, need to add paginination
 def download_Quads(items, bbox_name, start_dates, cur_date):
@@ -49,35 +75,33 @@ def download_Quads(items, bbox_name, start_dates, cur_date):
 
     temp_DIR = os.path.join(DIR, bbox_name)
 
-    # If first time extracting images then
-    if start_date == start_dates[0]:
-        # Randomly extract 20% of quads in the geometry
-        selected_quads[bbox_name] = np.random.choice(items, int(len(items)*0.2), replace=False)
+    selected_quads = get_quads_for_date(items, bbox_name)
 
     count = 0
-    num_items = len(random_items)
+    num_items = len(selected_quads)
 
     for chosen_quad in items:
 
         # Only download selected quads
-        if (chosen_quad in selected_quads[bbox_name]):
+        if (chosen_quad in selected_quads):
             print ("Progress: {:.2f}% ({}/{:.0f})".format(count/(num_items*0.2)*100, count+1, num_items*0.2))
 
             # Format name
             link = chosen_quad['_links']['download']
             name = chosen_quad['id']
-            name = name + '.tiff'
+            name = name
 
             # Add quad to DIR
             temp_DIR = os.path.join(DIR, name)
-
+            print (temp_DIR)
             # If this quad does not have a folder then create it
-            if not os.path(temp_DIR):
+            if not os.path.isdir(temp_DIR):
                 os.mkdir(temp_DIR)
 
             # Set image name to be current date
-            filename = os.path.join(temp_DIR, os.mkdir(path))
-
+            filename = os.path.join(temp_DIR, cur_date)
+            filename = filename + '.tiff'
+            print (filename)
             # Do not download a quad that already exists
             if not os.path.isfile(filename):
                 # Download quad
@@ -92,7 +116,7 @@ def download_Quads(items, bbox_name, start_dates, cur_date):
     print ("Progress: Complete")
 
 
-def acquire_images(start_dates, end_dates, mosaics):
+def acquire_images(start_dates, end_dates, mosaics, API_URL, session):
 
     # Go through each year
     for cur_date in start_dates:
@@ -112,7 +136,7 @@ def acquire_images(start_dates, end_dates, mosaics):
             }
 
             # Get all quads for the current bbox
-            quads_url = "{}/{}/quads?_page_size=100000".format(API_URL, mosaic_ID) # Page size set to arbitrarily high number
+            quads_url = "{}/{}/quads?_page_size=100000".format(API_URL, mosaic_id) # Page size set to arbitrarily high number
 
             res = session.get(quads_url, params=search_parameters, stream=True)
 
@@ -138,10 +162,18 @@ def main():
     #authenticate
     session.auth = (PLANET_API_KEY, "") #<= change to match variable for API Key if needed
 
+
+    # Set up session with Google drive to store the images:
+    gauth = GoogleAuth()
+    drive = GoogleDrive(gauth)
+
+    DIR = r'/Volumes/GoogleDrive/My\ Drive/PlanetScope\ Imagery/Quads/'
+    upload_file = 'test.txt'
+    
     # Get mosaics and sort them from oldest to latest
     start_dates, end_dates, mosaics = get_mosaics(API_URL, session)
 
-    acquire_images(start_dates, end_dates, mosaics)
+    acquire_images(start_dates, end_dates, mosaics, API_URL, session)
 
 AmaQuad1_1 = "-64.0283203125, 0.5273363048115169, -59.853515625, 3.908098881894123"
 AmaQuad1_2 = "-68.92822265625, 0.4833927027896987, -66.9287109375, 1.845383988573187"
@@ -233,5 +265,5 @@ bbox_dict = {
 
 }
 
-if __init__ == "__main__":
+if __name__ == "__main__":
     main()
