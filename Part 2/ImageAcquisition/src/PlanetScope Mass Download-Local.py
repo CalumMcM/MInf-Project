@@ -11,8 +11,6 @@ from os.path import *
 from os import listdir
 import pickle
 from rasterio.plot import show
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 
 def get_mosaics(API_URL, session):
     # Arrays to hold a list of all start and end dates
@@ -67,14 +65,20 @@ def get_quads_for_date(items, bbox_name):
 
     return selected_quads
 
+def parse_date(cur_date):
+    """
+    Returns just the YYYY-MM-DD
+    part of the date
+    """
+    return cur_date.split('T')[0]
+
 # todo: currently only takes first 50 images, need to add paginination
-def download_Quads(items, bbox_name, start_dates, cur_date, gauth, drive):
+def download_Quads(items, bbox_name, start_dates, cur_date):
     """
     Randomly selects 20% of the available quads and downloads them
     """
     # Location to save the quads
     DIR = '/Volumes/GoogleDrive/My Drive/PlanetScope Imagery/Quads/' # G Drive folder location
-
 
     selected_quads = get_quads_for_date(items, bbox_name)
 
@@ -83,35 +87,26 @@ def download_Quads(items, bbox_name, start_dates, cur_date, gauth, drive):
 
     # Determine which biome we are in
     # and what folder the quads should belong to
-    biome_id = ''
     biome_name = ''
-    biome_dir_query = ''
-    print (bbox_name)
     if 'Ama' in bbox_name:
-        biome_id = '1c3bP0XyztMpCMivuscMMoOKpfn_8m_Gp'
         biome_name = 'Amazon'
-        biome_dir_query = "'1c3bP0XyztMpCMivuscMMoOKpfn_8m_Gp' in parents and trashed=false"
     elif 'Cer' in bbox_name:
-        biome_id = '1yIytjv8yX_hSJv4vWjXFt5jStrObeQVo'
         biome_name = 'Cerrado'
-        biome_dir_query = "'1yIytjv8yX_hSJv4vWjXFt5jStrObeQVo' in parents and trashed=false"
     elif 'Cat' in bbox_name:
-        biome_id = '1MA0AUgR_ucfXc5OGvDadF2AzVDUXG_9U'
         biome_name = 'Caatinga'
-        biome_dir_query = "'1MA0AUgR_ucfXc5OGvDadF2AzVDUXG_9U' in parents and trashed=false"
 
+    # Add directory to biome folder
     temp_DIR = os.path.join(DIR, biome_name)
+    if not os.path.isdir(temp_DIR):
+        os.mkdir(temp_DIR)
+
+    # Add directory to bbox
     temp_DIR = os.path.join(temp_DIR, bbox_name)
+    if not os.path.isdir(temp_DIR):
+        os.mkdir(temp_DIR)
 
-
-    # Get list of all quad folders already
-    # generated for this bbox
-    quads_list = drive.ListFile({'q': biome_dir_query}).GetList()
-    quad_dirs = [file['title'] for file in quads_list]
-    print (quad_dirs)
     for chosen_quad in items:
         # Only download selected quads
-        print (chosen_quad)
         if (chosen_quad in selected_quads):
             print ("Progress: {:.2f}% ({}/{:.0f})".format(count/(num_items*0.2)*100, count+1, num_items*0.2))
 
@@ -121,69 +116,33 @@ def download_Quads(items, bbox_name, start_dates, cur_date, gauth, drive):
 
             # Add quad to DIR
             quad_DIR = os.path.join(temp_DIR, name)
-            print (quad_DIR)
 
             # If this quad does not have a folder then create it
-            if not chosen_quad in quad_dirs:
+            if not os.path.isdir(quad_DIR):
                 print ("MAKING NEW QUAD DIR: {}".format(name))
-                folder_name = input(quad_DIR)
-                folder = drive.CreateFile({'title' : folder_name, 'mimeType' : 'application/vnd.google-apps.folder'})
-                folder.Upload()
+                os.mkdir(quad_DIR)
 
-            # Set image name to be current date
-            date_DIR = os.path.join(quad_DIR, cur_date)
-
-            # Get list of all quad folders already
-            # generated for this bbox
-            for quad_DIR in quads_list:
-                if quad_DIR['title'] == name:
-                    quad_id = quad_DIR['id']
-                    quad_dir_query = "'"+quad_id+"' in parents and trashed=false"
-                    break
-
-            dates_list = drive.ListFile({'q': biome_dir_query}).GetList()
-            date_DIRs = [file['title'] for file in dates_list]
-
-            # Check this date has not already been downloaded
-            if not cur_date in date_DIRs:
-                print ("MAKING NEW DATE DIR: {}".format(date))
-                folder_name = input(date_DIR)
-                folder = drive.CreateFile({'title' : folder_name, 'mimeType' : 'application/vnd.google-apps.folder'})
-                folder.Upload()
+            formatted_date = parse_date(cur_date)
 
             # Append filetype to filename
-            filename = name+'.tiff'
+            filename = formatted_date+'.tiff'
 
-            # Get all files in this date directory
-            # after first getting the current date directory ID
-            for date_DIR in dates_list:
-                if date_DIR['title'] == cur_date:
-                    date_id = date_DIR['id']
-                    date_dir_query = "'"+date_id+"' in parents and trashed=false"
-                    break
-
-            files_list = drive.ListFile({'q': biome_dir_query}).GetList()
-            file_DIRs = [file['title'] for file in dates_list]
+            # Set image name to be current date
+            date_DIR = os.path.join(quad_DIR, filename)
 
             # If quad has not already been downloaded
             # download the quad
-            if not filename+'.tiff' in file_DIRs:
+            if not os.path.isfile(date_DIR):
                 # Download quad to local machine
-                print ("RETRIEVING: " + str(file_DIR))
-                urllib.request.urlretrieve(download_link, filename)
+                print ("RETRIEVING: " + str(date_DIR))
+                urllib.request.urlretrieve(download_link, date_DIR)
 
-                print ("UPLOADING: {}".format(filename))
-                # Upload quad to date folder in GDrive
-                gfile = drive.CreateFile({'parents': [{'id': date_id}]})
-                gfile.SetContentFile(filename)
-                gfile.Upload() # Upload the file
-
-                count += 1
+            count += 1
 
     print ("Progress: Complete")
 
 
-def acquire_images(start_dates, end_dates, mosaics, API_URL, session,gauth, drive):
+def acquire_images(start_dates, end_dates, mosaics, API_URL, session):
 
     # Go through each year
     for cur_date in start_dates:
@@ -213,7 +172,7 @@ def acquire_images(start_dates, end_dates, mosaics, API_URL, session,gauth, driv
 
             print("QUAD LIST API STATUS: {} NUMBER OF QUADS: {}".format(str(res.status_code), len(items)))
 
-            download_Quads(items, bbox, start_dates, cur_date, gauth, drive)
+            download_Quads(items, bbox, start_dates, cur_date)
 
 def main():
 
@@ -229,15 +188,10 @@ def main():
     #authenticate
     session.auth = (PLANET_API_KEY, "") #<= change to match variable for API Key if needed
 
-
-    # Set up session with Google drive to store the images:
-    gauth = GoogleAuth()
-    drive = GoogleDrive(gauth)
-
     # Get mosaics and sort them from oldest to latest
     start_dates, end_dates, mosaics = get_mosaics(API_URL, session)
 
-    acquire_images(start_dates, end_dates, mosaics, API_URL, session, gauth, drive)
+    acquire_images(start_dates, end_dates, mosaics, API_URL, session)
 
 AmaQuad1_1 = "-64.0283203125, 0.5273363048115169, -59.853515625, 3.908098881894123"
 AmaQuad1_2 = "-68.92822265625, 0.4833927027896987, -66.9287109375, 1.845383988573187"
