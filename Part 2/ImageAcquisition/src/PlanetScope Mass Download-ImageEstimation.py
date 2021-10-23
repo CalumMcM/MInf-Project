@@ -11,6 +11,7 @@ from os.path import *
 from os import listdir
 import pickle
 from rasterio.plot import show
+import pandas as pd
 
 def get_mosaics(API_URL, session):
     # Arrays to hold a list of all start and end dates
@@ -144,13 +145,15 @@ def download_Quads(items, bbox_name, start_dates, cur_date):
 
 def acquire_images(start_dates, end_dates, mosaics, API_URL, session):
 
+    images_per_date = {}
     # Go through each year
     for cur_date in start_dates:
+
+        images_per_bbox = {}
 
         mosaic_id = get_mosaic_id(cur_date, mosaics)
 
         print ("YEAR: {} MOSAIC_ID: {}".format(cur_date, mosaic_id))
-
         for bbox in bbox_dict:
 
             print ("BBOX: " + str(bbox))
@@ -170,9 +173,17 @@ def acquire_images(start_dates, end_dates, mosaics, API_URL, session):
 
             items = quads['items']
 
+            images_per_bbox[bbox] = len(items)
+
             print("QUAD LIST API STATUS: {} NUMBER OF QUADS: {}".format(str(res.status_code), len(items)))
 
-            download_Quads(items, bbox, start_dates, cur_date)
+            #download_Quads(items, bbox, start_dates, cur_date)
+
+        images_per_date[cur_date] = images_per_bbox
+
+    df = pd.DataFrame(images_per_date)
+    df.to_pickle("image_estimation.pkl")
+    print (df)
 
 def main():
 
