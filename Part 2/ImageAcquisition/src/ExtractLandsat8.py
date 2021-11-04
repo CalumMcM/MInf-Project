@@ -5,6 +5,10 @@ import argparse
 import ee
 import time
 
+#start_dates = ['2015-05-01', '2016-05-01', '2017-05-01', '2018-05-01', '2019-05-01']
+#end_dates = ['2015-10-15', '2016-10-15', '2017-10-15', '2018-10-15', '2019-10-15']
+
+_start_date = ""
 # Returns false if the requested number of images (value)
 # is greater than 950 or less than 1
 def check_valid_req(value):
@@ -24,8 +28,8 @@ def get_args():
     parser.add_argument('--seed', nargs="?", type=int, default=0,
                         help='Initial seed that will be used for random feature point creation')
 
-    parser.add_argument('--outputType', nargs="?", type=str, default=0,
-                        help='\'RGB\' for RGB images and \'NDVI\' for NDVI images')
+    parser.add_argument('--start_date', nargs="?", type=str, default=0,
+                        help='\'YYY-MM-DD\' for the starting date that is used in this script')
 
     parser.add_argument('--QuadNum', nargs="?", type=str, default=0,
                         help='The quadrant you want to extract from.\n Choices: 1=Quad 1, 2=Quad 2, 3=Quad 3, 4=Quad 4, vis=Visual')
@@ -63,7 +67,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2013-05-01', '2021-10-15').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-05-01', '2018-05-01').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -184,7 +188,7 @@ def export(image, folder, fileName):
 
     status = task.status()['state']
 
-    print ("BIOME: " + folder + "\tSEED: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+    print ("BIOME: " + folder + "\tDATE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
     while (status != 'COMPLETED' and status != 'FAILED'):
 
@@ -192,7 +196,7 @@ def export(image, folder, fileName):
 
         time.sleep(10)
 
-    print ("BIOME: " + folder + "\tSEED: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
+    print ("BIOME: " + folder + "\tDATE: "+ str(fileName) + "\tSTATUS: " + str(status) + '\tTIME: ' + str(time.strftime("%H:%M:%S", time.localtime())))
 
 
 # Export the given image to the Google drive in the
@@ -297,13 +301,83 @@ def visualExtract():
 
         exportTable(mainVisualFC,  'Visual NDVI', str(args.seed))
 
+def python2PythonExtraction(num_imgs, seed, QuadNum, start_date):
+
+    ee.Initialize()
+
+    _start_date = start_date
+
+    season = "Summer"
+
+    print ("Thread {} Start_Date: {}  num_imgs: {} seed: {} quad_num: {}                            STARTING".format(seed, start_date, num_imgs, seed, QuadNum))
+
+    
+    if (QuadNum == 'vis'):
+        visualExtract()
+        exit()
+
+    # Create Caatinga geometries
+    geometryCAT = geometryPicker(int(QuadNum), "Caatinga")
+    catFileName = str(QuadNum)
+    # Create Cerrado geometries
+    geometryCER = geometryPicker(int(QuadNum), "Cerrado")
+    cerFileName = str(QuadNum)
+
+    # Create Amazonia geometries
+    geometryAMA = geometryPicker(int(QuadNum), "Amazonia")
+    amaFileName = str(QuadNum)
+
+    # Number of total tiles to extract per biome
+    N = seed+num_imgs
+
+    # Only extract 1 tile for each biome at a time
+    num_points = 1
+
+    for i in range(seed, N):
+
+        # Get the image for each biome
+        biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', True, i, num_points)
+        biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', True, i, num_points)
+        biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', True, i, num_points)
+
+        # TODO: CHECK IF NORMALISATION BREAKS. THE IMAGES IF NOT REMOVE
+        normCaatinga = scale(biomeCaatinga)
+        normCerrado  = scale(biomeCerrado)
+        normAmazonia = scale(biomeAmazonia)
+
+        # Change object type to one that can be extracted (i.e. FeatureCollection)
+        catCollection = ee.FeatureCollection([biomeCaatinga])
+        cerCollection = ee.FeatureCollection([biomeCerrado])
+        amaCollection = ee.FeatureCollection([biomeAmazonia])
+
+        # Append image folder name to directory
+        catFileName += "_"+str(seed)+"-"+str(i)+"_"
+        cerFileName += "_"+str(seed)+"-"+str(i)+"_"
+        amaFileName += "_"+str(seed)+"-"+str(i)+"_"
+
+        # Extract the images
+        if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
+            export(biomeCaatinga, "TemporalCaatinga", catFileName+start_date)
+            
+        if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
+            export(biomeCerrado, "TemporalCerrado", cerFileName+start_date)
+            
+        if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
+            export(biomeAmazonia, "TemporalAmazonia", amaFileName+start_date)
+            
+    
 # Creates N many images for each biome and exports them
 # to the google drive
 def main():
 
+    ee.Initialize()
+
     args = get_args()
 
     season = "Summer"
+
+    print ("Thread {} Start_Date: {}  num_imgs: {} seed: {} quad_num: {}                            STARTING".format(args.seed, args.start_date, args.num_imgs, args.seed, args.QuadNum))
+
 
     if (args.QuadNum == 'vis'):
         visualExtract()
@@ -311,73 +385,51 @@ def main():
 
     # Create Caatinga geometries
     geometryCAT = geometryPicker(int(args.QuadNum), "Caatinga")
-
+    catFileName = str(args.QuadNum)
     # Create Cerrado geometries
     geometryCER = geometryPicker(int(args.QuadNum), "Cerrado")
-
+    cerFileName = str(args.QuadNum)
     # Create Amazonia geometries
     geometryAMA = geometryPicker(int(args.QuadNum), "Amazonia")
 
-    # Extract RGB
-    if args.outputType == "RGB":
 
-        # Number of total tiles to extract per biome
-        N = args.seed+args.num_imgs
+    # Number of total tiles to extract per biome
+    N = args.seed+args.num_imgs
 
-        # Only extract 1 tile for each biome at a time
-        num_points = 1
+    # Only extract 1 tile for each biome at a time
+    num_points = 1
 
-        for i in range(args.seed, N):
+    for i in range(args.seed, N):
 
-            biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', True, i, num_points)
-            biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', True, i, num_points)
-            biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', True, i, num_points)
+        biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', True, i, num_points)
+        biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', True, i, num_points)
+        biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', True, i, num_points)
 
-            normCaatinga = scale(biomeCaatinga)
-            normCerrado  = scale(biomeCerrado)
-            normAmazonia = scale(biomeAmazonia)
+        catFileName = str(args.QuadNum)
+        cerFileName = str(args.QuadNum)
+        amaFileName = str(args.QuadNum)
+        normCaatinga = scale(biomeCaatinga)
+        normCerrado  = scale(biomeCerrado)
+        normAmazonia = scale(biomeAmazonia)
 
-            catCollection = ee.FeatureCollection([biomeCaatinga]);
-            cerCollection = ee.FeatureCollection([biomeCerrado]);
-            amaCollection = ee.FeatureCollection([biomeAmazonia]);
+        catCollection = ee.FeatureCollection([biomeCaatinga]);
+        cerCollection = ee.FeatureCollection([biomeCerrado]);
+        amaCollection = ee.FeatureCollection([biomeAmazonia]);
 
-            if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
-                export(biomeCaatinga, 'Caatinga Quad L8 '+str(args.QuadNum), i)
-
-            if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
-                export(biomeCerrado, 'Cerrado Quad L8 '+str(args.QuadNum), i)
-
-            if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
-                export(biomeAmazonia, 'Amazonia Quad L8 '+str(args.QuadNum), i)
-
-
-    # Extract NDVI
-    elif args.outputType == "NDVI":
-
-        # Total number of tiles that will be extracted
-        N = args.seed+args.num_imgs
-
-        # Extract 1 tile for each biome at a time
-        num_points = 1
-
-        mainCaatingaFC = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', False, 0, num_points)
-        mainCerradoFC = getBiomeImage(geometryCER, '324ca8', 'Cerrado', False, 0, num_points)
-        mainAmazoniaFC = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', False, 0, num_points)
-
-        for i in range(args.seed,N):
-
-            biomeCaatingaFC = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', False, i, num_points)
-            biomeCerradoFC = getBiomeImage(geometryCER, '324ca8', 'Cerrado', False, i, num_points)
-            biomeAmazoniaFC = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', False, i, num_points)
-
-            mainCaatingaFC = mainCaatingaFC.merge(biomeCaatingaFC);
-            mainCerradoFC = mainCerradoFC.merge(biomeCerradoFC);
-            mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazoniaFC);
-
-
-        exportTable(mainCaatingaFC,  'Caatinga NDVI Quad '+str(args.QuadNum), str(args.seed))
-        exportTable(mainCerradoFC,   'Cerrado NDVI Quad '+str(args.QuadNum), str(args.seed))
-        exportTable(mainAmazoniaFC,  'Amazonia NDVI Quad '+str(args.QuadNum), str(args.seed))
+        # Append image folder name to directory
+        catFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+        cerFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+        amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+        # Extract the images
+        if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
+            export(biomeCaatinga, "TemporalCaatinga", catFileName+args.start_date)
+            pass
+        if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
+            export(biomeCerrado, "TemporalCerrado", cerFileName+args.start_date)
+            pass
+        if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
+            export(biomeAmazonia, "TemporalAmazonia", amaFileName+args.start_date)
+            pass
 
 # Returns the quadrant area of the CERRADO biome
 def geometryCERQuad1():
