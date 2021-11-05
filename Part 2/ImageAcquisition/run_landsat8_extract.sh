@@ -2,13 +2,13 @@
 echo "Bash version ${BASH_VERSION}..."
 
 CUR_START_DATE='2015-05-01' # THIS SHOULD BE THE SAME AS IT IS IN ExtractLandsat8.py
-NUM_IMGS=50 # The number of images that are downloaded per thread divided by 3 (given there are three biomes)
+NUM_IMGS=16 # The number of images that are downloaded per thread divided by 3 (given there are three biomes)
 NUM_THREADS=50 
 
 total_quad_images=$((NUM_IMGS*NUM_THREADS))
 
 # Go through each quad number
-for QUAD_NUM in {1..4} 
+for QUAD_NUM in {2..4} 
   do
     echo "QUAD_NUM: $QUAD_NUM"
     #for batch_num in {0..25..5} #{0..$total_quad_images..$NUM_IMGS}    #

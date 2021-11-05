@@ -67,7 +67,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-05-01', '2018-05-01').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-05-01', '2015-10-15').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -422,13 +422,13 @@ def main():
         amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
         # Extract the images
         if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
-            export(biomeCaatinga, "TemporalCaatinga", catFileName+args.start_date)
+            export(biomeCaatinga, "TemporalCaatinga2015", catFileName+args.start_date)
             pass
         if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
-            export(biomeCerrado, "TemporalCerrado", cerFileName+args.start_date)
+            export(biomeCerrado, "TemporalCerrado2015", cerFileName+args.start_date)
             pass
         if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
-            export(biomeAmazonia, "TemporalAmazonia", amaFileName+args.start_date)
+            export(biomeAmazonia, "TemporalAmazonia2015", amaFileName+args.start_date)
             pass
 
 # Returns the quadrant area of the CERRADO biome
