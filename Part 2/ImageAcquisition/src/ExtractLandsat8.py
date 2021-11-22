@@ -5,8 +5,8 @@ import argparse
 import ee
 import time
 
-#start_dates = ['2015-05-01', '2016-05-01', '2017-05-01', '2018-05-01', '2019-05-01']
-#end_dates = ['2015-10-15', '2016-10-15', '2017-10-15', '2018-10-15', '2019-10-15']
+#start_dates = ['2015-01-01', '2016-01-01', '2017-01-01', '2018-01-01', '2019-01-01']
+#end_dates = ['2015-12-31', '2016-12-31', '2017-12-31', '2018-12-31', '2019-12-31']
 
 _start_date = ""
 # Returns false if the requested number of images (value)
@@ -67,7 +67,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-05-01', '2015-10-15').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2019-01-01', '2019-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -422,13 +422,13 @@ def main():
         amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
         # Extract the images
         if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
-            export(biomeCaatinga, "TemporalCaatinga2015", catFileName+args.start_date)
+            export(biomeCaatinga, "TemporalCaatinga2019", catFileName+args.start_date)
             pass
         if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
-            export(biomeCerrado, "TemporalCerrado2015", cerFileName+args.start_date)
+            export(biomeCerrado, "TemporalCerrado2019", cerFileName+args.start_date)
             pass
         if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
-            export(biomeAmazonia, "TemporalAmazonia2015", amaFileName+args.start_date)
+            export(biomeAmazonia, "TemporalAmazonia2019", amaFileName+args.start_date)
             pass
 
 # Returns the quadrant area of the CERRADO biome
