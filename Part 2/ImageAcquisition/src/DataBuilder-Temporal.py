@@ -16,7 +16,7 @@ def biome_numerator(biome_DIR):
 
     # if biome == "TemporalAmazonia":
     #     return np.zeros((4,51,51,1))
-    # if biome == "TemporalCerrado":
+    # if biome == "TemporalCerrado": 
     #     return np.ones((4,51,51,1))
     # if biome == "TemporalCaatinga":
     #     return np.full((4,51,51,1), 2)
