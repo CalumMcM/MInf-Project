@@ -38,16 +38,16 @@ for QUAD_NUM in {1..4}
     #for batch_num in {0..25..5} #{0..$total_quad_images..$NUM_IMGS}    #
     for (( batch_num =0; batch_num < $total_quad_images; batch_num += $NUM_IMGS))
       do
-        if [ $QUAD_NUM -eq 2 ];
+        if [ $QUAD_NUM -eq 4 ];
         then
         # num_imgs = NUM_IMGS-seed
         # seed = broken point
-          temp_batch_num=$((batch_num+10))
-          temp_num_images=$((NUM_IMGS-10))
+          temp_batch_num=$((batch_num+29))
+          temp_num_images=$((NUM_IMGS-29))
           echo "STARTING BATCH NUM: $temp_batch_num"
           python src/ExtractLandsat8.py --num_imgs $temp_num_images --seed $temp_batch_num --QuadNum $QUAD_NUM --start_date $CUR_START_DATE &
         fi 
-        if [ $QUAD_NUM -gt 2 ];
+        if [ $QUAD_NUM -gt 4 ];
         then
           echo "STARTING BATCH NUM: $batch_num"
           python src/ExtractLandsat8.py --num_imgs $NUM_IMGS --seed $batch_num --QuadNum $QUAD_NUM --start_date $CUR_START_DATE &
