@@ -367,6 +367,47 @@ def generate_tiles_quad(tile_dir, img_dir, quads, quad_nums, cur_tile_num = 0, r
 
     return cur_tile_num
 
+def reset_shape_2d(tile):
+    """
+    Takes a tile and removes/pads it
+    so that the returned tile has shape
+    (51, 51)
+    """
+    x, y = tile.shape
+        
+    # Reduce shape
+    if (x == 51 and y == 51):
+
+        return tile
+    
+    elif (x>51):
+        tile = np.delete(tile, -1, 0)
+        return reset_shape_2d(tile)
+    
+    elif (y>51):
+        tile = np.delete(tile, -1, 1)
+        return reset_shape_2d(tile)
+
+    # Pad shape
+    elif (x<51):
+
+        basic = np.array([tile[0]])
+
+        tile = np.vstack((tile, basic))
+        
+        return reset_shape_2d(tile)
+    
+    elif (y < 51):
+                
+        mean = np.mean(tile)
+        new_col = np.full((51,1), mean)
+
+        tile = np.append(tile, new_col, axis=1)
+        
+        #tile = np.append(tile, basic, axis=1)
+                
+        return reset_shape_2d(tile)
+        
 def reset_shape(tile):
     """
     Takes a tile and removes/pads it
