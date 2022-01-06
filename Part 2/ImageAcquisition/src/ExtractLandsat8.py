@@ -34,6 +34,10 @@ def get_args():
     parser.add_argument('--QuadNum', nargs="?", type=str, default=0,
                         help='The quadrant you want to extract from.\n Choices: 1=Quad 1, 2=Quad 2, 3=Quad 3, 4=Quad 4, vis=Visual')
 
+    parser.add_argument('--OutputType', nargs="?", type=str, default="RGB",
+                        help='Type of date to be extracted for each image, Date = date, RGB = RGB')
+
+
     args = parser.parse_args()
 
     #print (args)
@@ -67,7 +71,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2019-01-01', '2019-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2018-01-01', '2018-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -92,6 +96,13 @@ def maskClouds(image):
 
   return masked
 """
+
+def getDate(image):
+    return ee.Date(image)
+
+def createFeature(date):
+
+    return ee.Feature(None, {"Date" : date})
 
 # Extracts the red and near-infrared bands from an image
 # and computes the NDVI band, appending it to the returned image
@@ -156,19 +167,29 @@ def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, seed, num_p
     # If BGR_images flag is false then extract NDVI data from each image tile
     if (not BGR_images):
 
-        withNDVI = filteredClouds.map(addNDVI);
+        """ FOR NDVI """
 
-        """ TO ADD EACH NDVI IMAGE TO THE MAP
-        ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']}
+        # withNDVI = filteredClouds.map(addNDVI);
 
-        Map.addLayer(withNDVI.select('NDVI'),
-                 {min: -1, max: 1, palette: ['blue', 'white', 'green']},
-                 'NDVI classification');
-        """
+        # """ TO ADD EACH NDVI IMAGE TO THE MAP
+        # ndviParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']}
 
-        meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI))
+        # Map.addLayer(withNDVI.select('NDVI'),
+        #          {min: -1, max: 1, palette: ['blue', 'white', 'green']},
+        #          'NDVI classification');
+        # """
 
-        return meanNDVIs
+        # meanNDVIs = ee.FeatureCollection(withNDVI.map(meanNDVI))
+
+        # return meanNDVIs
+
+        """ FOR DATE """
+
+        dates = ee.List(images.aggregate_array("system:time_start")).map(getDate);
+      
+        datesFeatureCollection = ee.FeatureCollection(dates.map(createFeature))
+
+        return datesFeatureCollection
 
     else:
         # For now extract all bands
@@ -334,37 +355,71 @@ def main():
     # Only extract 1 tile for each biome at a time
     num_points = 1
 
-    for i in range(args.seed, N):
+    # Extract RGB
+    if args.OutputType == "RGB":
+        for i in range(args.seed, N):
 
-        biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', True, i, num_points)
-        biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', True, i, num_points)
-        biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', True, i, num_points)
+            biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', True, i, num_points)
+            biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', True, i, num_points)
+            biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', True, i, num_points)
 
-        catFileName = str(args.QuadNum)
-        cerFileName = str(args.QuadNum)
-        amaFileName = str(args.QuadNum)
-        normCaatinga = scale(biomeCaatinga)
-        normCerrado  = scale(biomeCerrado)
-        normAmazonia = scale(biomeAmazonia)
+            catFileName = str(args.QuadNum)
+            cerFileName = str(args.QuadNum)
+            amaFileName = str(args.QuadNum)
 
-        catCollection = ee.FeatureCollection([biomeCaatinga]);
-        cerCollection = ee.FeatureCollection([biomeCerrado]);
-        amaCollection = ee.FeatureCollection([biomeAmazonia]);
+            normCaatinga = scale(biomeCaatinga)
+            normCerrado  = scale(biomeCerrado)
+            normAmazonia = scale(biomeAmazonia)
 
-        # Append image folder name to directory
-        catFileName += "_"+str(args.seed)+"-"+str(i)+"_"
-        cerFileName += "_"+str(args.seed)+"-"+str(i)+"_"
-        amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            catCollection = ee.FeatureCollection([biomeCaatinga]);
+            cerCollection = ee.FeatureCollection([biomeCerrado]);
+            amaCollection = ee.FeatureCollection([biomeAmazonia]);
+
+            # Append image folder name to directory
+            catFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            cerFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            # Extract the images
+            if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
+                export(biomeCaatinga, "Caatinga 2019 Quad "+args.QuadNum, i)
+                pass
+            if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
+                export(biomeCerrado, "Cerrado 2019 Quad "+args.QuadNum, i)
+                pass
+            if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
+                export(biomeAmazonia, "Amazonia 2019 Quad "+args.QuadNum, i)
+                pass
+
+    # Extract Date
+    elif args.OutputType == "Date":
+
+        mainCaatingaFC = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', False, 0, num_points)
+        mainCerradoFC = getBiomeImage(geometryCER, '324ca8', 'Cerrado', False, 0, num_points)
+        mainAmazoniaFC = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', False, 0, num_points)
+
+        for i in range(args.seed, N):
+
+            biomeCaatinga = getBiomeImage(geometryCAT, '32a83a', 'Caatinga', False, i, num_points)
+            biomeCerrado = getBiomeImage(geometryCER, '324ca8', 'Cerrado', False, i, num_points)
+            biomeAmazonia = getBiomeImage(geometryAMA, 'FF0000', 'Amazonia', False, i, num_points)
+
+            catFileName = str(args.QuadNum)
+            cerFileName = str(args.QuadNum)
+            amaFileName = str(args.QuadNum)
+
+            # Append image folder name to directory
+            catFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            cerFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+            amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
+
+            mainCaatingaFC = mainCaatingaFC.merge(biomeCaatinga);
+            mainCerradoFC = mainCerradoFC.merge(biomeCerrado);
+            mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazonia);
+
         # Extract the images
-        if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
-            export(biomeCaatinga, "Caatinga 2019 Quad "+args.QuadNum, i)
-            pass
-        if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
-            export(biomeCerrado, "Cerrado 2019 Quad "+args.QuadNum, i)
-            pass
-        if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
-            export(biomeAmazonia, "Amazonia 2019 Quad "+args.QuadNum, i)
-            pass
+        exportTable(mainCaatingaFC, "Caatinga Dates 2018 Quad"+args.QuadNum, str(args.seed))
+        exportTable(mainCerradoFC, "Cerrado Dates 2018 Quad "+args.QuadNum, str(args.seed))
+        exportTable(mainAmazoniaFC, "Amazonia Dates 2018 Quad "+args.QuadNum, str(args.seed))
 
 # Returns the quadrant area of the CERRADO biome
 def geometryCERQuad1():
