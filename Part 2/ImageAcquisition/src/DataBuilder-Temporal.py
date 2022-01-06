@@ -35,13 +35,18 @@ def condition(quad_DIR, biome_DIR):
 #     save_DIR = '/Volumes/GoogleDrive/My Drive/TemporalData-Processed'
 
 def get_data():
+
     X_data = np.zeros((1,4,51,51,3))
     y_data = np.zeros((1,3))
 
-    head_DIR = '/Volumes/GoogleDrive/My Drive/TemporalData'
+    head_DIR = '/Volumes/GoogleDrive/My Drive/TemporalData-Train'
     save_DIR = '/Volumes/GoogleDrive/My Drive/TemporalData-Processed'
     subfolders = [f.path for f in os.scandir(head_DIR) if f.is_dir()]
     idx = 0
+
+    failed = 0
+    years_dict = {"0": 0, "1": 0, "2": 0, "3": 0}
+
     for biome_DIR in subfolders:
         print ("CUR BIOME: {}".format(biome_DIR.split('/')[-1]))
         cur_biome_label = biome_numerator(biome_DIR)
@@ -84,18 +89,27 @@ def get_data():
                         # Ignore images that are mishapen
                         x, y, z  = img.shape
 
-                        if (x > 48 and x < 54) and (y > 48 and y < 54):
-                            reset_img = reset_shape(img)
+                        if (x >= 48 and x <= 54) and (y >= 48 and y <= 54):
+                            z = z
+                            #reset_img = reset_shape(img)
 
-                            clean_img = remove_nan(reset_img)
+                            #clean_img = remove_nan(reset_img)
 
-                            if clean_img.shape == (51,51,3):
-                                years_array[cur_year,:] = clean_img
+                            #if clean_img.shape == (51,51,3):
+                            #    years_array[cur_year,:] = clean_img
 
-                            cur_year += 1
-                    
+                        else:
+                            print (x)
+                            print (y)
+                            years_dict[str(cur_year)] += 1
+                            failed += 1
+                        
+                        cur_year += 1
+
+                
                     # Save each series of images as a numpy array
-                    np.save(os.path.join(save_DIR, '{}.npy'.format(idx)), years_array)
+                    #np.save(os.path.join(save_DIR, '{}.npy'.format(idx)), years_array)
+                    
                     # Create training and label matrices
                     #X_data = np.append(X_data, np.array([years_array]), axis = 0)
                     #y_data = np.append(y_data, np.array([cur_biome_label]), axis = 0)
@@ -109,6 +123,7 @@ def get_data():
                         print ("Progress: {:.2f}% TIME REMAINING: {:.2f} seconds ".format(progress, time_remaining))
                         previous_progress= progress
                         start = time.time()
+                        break
 
                 # Method to stop early after idx number of images
                     
@@ -122,9 +137,11 @@ def get_data():
                 idx += 1
 
         print (biome_idx)
+        print (failed)
+        print (years_dict)
         y_data = np.append(y_data, np.array([cur_biome_label]*biome_idx), axis = 0)
-    
-    np.save(os.path.join(save_DIR, 'labels.npy'), y_data)
+    print (failed)
+    #np.save(os.path.join(save_DIR, 'labels.npy'), y_data)
     return idx
                 
 def main():
