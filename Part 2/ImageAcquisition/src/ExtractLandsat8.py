@@ -71,7 +71,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2018-01-01', '2018-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-01-01', '2015-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -381,13 +381,13 @@ def main():
             amaFileName += "_"+str(args.seed)+"-"+str(i)+"_"
             # Extract the images
             if (ee.Algorithms.IsEqual(catCollection.size(), 1)):
-                export(biomeCaatinga, "Caatinga 2019 Quad "+args.QuadNum, i)
+                export(biomeCaatinga, "Caatinga 2015 Quad "+args.QuadNum, i)
                 pass
             if (ee.Algorithms.IsEqual(cerCollection.size(), 1)):
-                export(biomeCerrado, "Cerrado 2019 Quad "+args.QuadNum, i)
+                export(biomeCerrado, "Cerrado 2015 Quad "+args.QuadNum, i)
                 pass
             if (ee.Algorithms.IsEqual(amaCollection.size(), 1)):
-                export(biomeAmazonia, "Amazonia 2019 Quad "+args.QuadNum, i)
+                export(biomeAmazonia, "Amazonia 2015 Quad "+args.QuadNum, i)
                 pass
 
     # Extract Date
@@ -417,9 +417,9 @@ def main():
             mainAmazoniaFC = mainAmazoniaFC.merge(biomeAmazonia);
 
         # Extract the images
-        exportTable(mainCaatingaFC, "Caatinga Dates 2018 Quad"+args.QuadNum, str(args.seed))
-        exportTable(mainCerradoFC, "Cerrado Dates 2018 Quad "+args.QuadNum, str(args.seed))
-        exportTable(mainAmazoniaFC, "Amazonia Dates 2018 Quad "+args.QuadNum, str(args.seed))
+        exportTable(mainCaatingaFC, "Caatinga Dates 2015 Quad"+args.QuadNum, str(args.seed))
+        exportTable(mainCerradoFC, "Cerrado Dates 2015 Quad "+args.QuadNum, str(args.seed))
+        exportTable(mainAmazoniaFC, "Amazonia Dates 2015 Quad "+args.QuadNum, str(args.seed))
 
 # Returns the quadrant area of the CERRADO biome
 def geometryCERQuad1():
