@@ -14,7 +14,7 @@ def condition(quad_DIR, biome_DIR):
         return False
     return True
 
-def get_spatial_data():
+def get_spatial_data(head_DIR):
 
     X_data = np.zeros((1,51,51,3))
 
