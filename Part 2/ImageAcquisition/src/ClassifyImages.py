@@ -130,16 +130,14 @@ def get_model(model_DIR):
     return model
 
 
-def get_coord(img, DIR):
+def get_coord(DIR):
     """
     Given a tif image and a directory this function will return the lat and long
     coordinates for the bottom left of the image as an Earth Engine Feature object
     """
 
-    path_vis = DIR + img
-
     # Read raster
-    with rs.open(path_vis) as r:
+    with rs.open(DIR) as r:
         T0 = r.transform  # upper-left pixel corner affine transform
         p1 = Proj(r.crs)
         A = r.read()  # pixel values
@@ -172,10 +170,8 @@ def get_class(y_pred):
     is returned.
     """
     threshold = 0.7
-    print (y_pred)
-    print (y_pred.max)
-    if y_pred.max > threshold:
-        return y_pred.argmax(axis=1)
+    if np.amax(y_pred) > threshold:
+        return np.argmax(y_pred)
     else:
         return -2
 
@@ -218,7 +214,6 @@ def build_dataset(head_DIR):
                 clean_images.append(image)
 
                 cur_img += 1
-
 
         if (cur_img%50 == 0):
 
@@ -306,7 +301,7 @@ def main():
         elif image_class == -2:
             inconclusive_FC += "\n" + image_Feature
 
-        if img_idx%100 == 0:
+        if (img_idx+1)%100 == 0:
 
             percentage_progress = img_idx/len(images) * 100
             end = time.time()
