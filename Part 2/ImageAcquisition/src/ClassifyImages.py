@@ -1,0 +1,266 @@
+import os
+import time
+import numpy as np
+import rasterio as rs
+from PIL import Image
+from affine import Affine
+from matplotlib import cm
+from pyproj import Proj, transform
+import tensorflow as tf
+from keras.models import Model
+from keras.layers import Dense, Conv2D, MaxPool2D, Flatten, GlobalAveragePooling2D,  BatchNormalization, Layer, Add, Dropout
+
+"""
+Given a directory of images this file will classify each image
+using the best ResNet model and return the location of each of 
+images.
+"""
+
+class ResnetBlock(Model):
+    """
+    A standard resnet block.
+    """
+
+    def __init__(self, channels: int, down_sample=False):
+        """
+        channels: same as number of convolution kernels
+        """
+        super().__init__()
+
+        self.__channels = channels
+        self.__down_sample = down_sample
+        self.__strides = [2, 1] if down_sample else [1, 1]
+
+        KERNEL_SIZE = (3, 3)
+        # use He initialization, instead of Xavier (a.k.a 'glorot_uniform' in Keras), as suggested in [2]
+        INIT_SCHEME = "he_normal"
+
+        self.conv_1 = Conv2D(self.__channels, strides=self.__strides[0],
+                             kernel_size=KERNEL_SIZE, padding="same", kernel_initializer=INIT_SCHEME)
+        self.bn_1 = BatchNormalization()
+        self.conv_2 = Conv2D(self.__channels, strides=self.__strides[1],
+                             kernel_size=KERNEL_SIZE, padding="same", kernel_initializer=INIT_SCHEME)
+        self.bn_2 = BatchNormalization()
+        self.merge = Add()
+
+        if self.__down_sample:
+            # perform down sampling using stride of 2, according to [1].
+            self.res_conv = Conv2D(
+                self.__channels, strides=2, kernel_size=(1, 1), kernel_initializer=INIT_SCHEME, padding="same")
+            self.res_bn = BatchNormalization()
+
+    def call(self, inputs):
+        res = inputs
+
+        x = self.conv_1(inputs)
+        x = self.bn_1(x)
+        x = tf.nn.relu(x)
+        x = self.conv_2(x)
+        x = self.bn_2(x)
+
+        if self.__down_sample:
+            res = self.res_conv(res)
+            res = self.res_bn(res)
+
+        # if not perform down sample, then add a shortcut directly
+        x = self.merge([x, res])
+        out = tf.nn.relu(x)
+        return out
+
+
+class ResNet18(Model):
+
+    def __init__(self, num_classes, **kwargs):
+        """
+            num_classes: number of classes in specific classification task.
+        """
+        super().__init__(**kwargs)
+        self.conv_1 = Conv2D(32, (7, 7), strides=2,
+                             padding="same", kernel_initializer="he_normal")
+        self.init_bn = BatchNormalization()
+        self.pool_2 = MaxPool2D(pool_size=(2, 2), strides=2, padding="same")
+        self.res_1_1 = ResnetBlock(32)
+        self.res_1_2 = ResnetBlock(32)
+        self.dropout1_3 = Dropout(0.3)
+        self.res_2_1 = ResnetBlock(64, down_sample=True)
+        self.res_2_2 = ResnetBlock(64)
+        self.dropout2_3 = Dropout(0.3)
+        #self.res_3_1 = ResnetBlock(32, down_sample=True)
+        #self.res_3_2 = ResnetBlock(32)
+        # self.res_4_1 = ResnetBlock(512, down_sample=True)
+        # self.res_4_2 = ResnetBlock(512)
+        self.avg_pool = GlobalAveragePooling2D()
+        self.flat = Flatten()
+        self.fc = Dense(num_classes, activation="softmax")
+
+    def call(self, inputs):
+        out = self.conv_1(inputs)
+        out = self.init_bn(out)
+        out = tf.nn.relu(out)
+        out = self.pool_2(out)
+        i = 0
+        #for res_block in [self.res_1_1, self.res_1_2, self.res_2_1, self.res_2_2, self.res_3_1, self.res_3_2, self.res_4_1, self.res_4_2]:
+        for res_block in [self.res_1_1, self.res_1_2, self.res_2_1, self.res_2_2]:
+            out = res_block(out)
+            i += 1
+            if i %2 == 0:
+                out = self.dropout1_3(out)
+        out = self.avg_pool(out)
+        out = self.flat(out)
+        out = self.fc(out)
+        return out
+
+def get_model(model_DIR):
+    """
+    Takes the path to a pretrained ResNet model
+    that has the same structure as ResNet18 class 
+    above. 
+    Returns the model with the weights of the 
+    pre-trained model loaded into it.
+    """
+    model = ResNet18(3)
+
+    model.build(input_shape = (None, 51, 51, 3))
+
+    model.compile(optimizer = 'adam', loss = 'catergorical_crossentropy', metrics=["accuracy"])
+
+    model.load_weights(model_DIR)
+    
+    return model
+
+
+def get_coord(img, DIR):
+    """
+    Given a tif image and a directory this function will return the lat and long
+    coordinates for the bottom left of the image as an Earth Engine Feature object
+    """
+
+    path_vis = DIR + img
+
+    # Read raster
+    with rs.open(path_vis) as r:
+        T0 = r.transform  # upper-left pixel corner affine transform
+        p1 = Proj(r.crs)
+        A = r.read()  # pixel values
+
+    # Following code obtained from Stack Overflow user Mike T
+    # All rows and columns
+    cols, rows = np.meshgrid(np.arange(A.shape[2]), np.arange(A.shape[1]))
+
+    # Get affine transform for pixel centres
+    T1 = T0 * Affine.translation(0.5, 0.5)
+
+    # Function to convert pixel row/column index (from 0) to easting/northing at centre
+    rc2en = lambda r, c: (c, r) * T1
+
+    # All eastings and northings (there is probably a faster way to do this)
+    eastings, northings = np.vectorize(rc2en, otypes=[np.float, np.float])(rows, cols)
+
+    # Project all longitudes, latitudes
+    p2 = Proj(proj='latlong',datum='WGS84')
+    longs, lats = transform(p1, p2, eastings, northings)
+
+    return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
+
+
+def main():
+    """
+    Given a directory (DIR) till load the
+    built dataset and predict the biome 
+    of each of the images
+    """
+
+    # Test quads for each biome
+    # Cat quad 3, Cer Quad 4, Ama Quad 2
+
+    DIR = r'/Volumes/GoogleDrive/My Drive/AmazonToCerrado1-2016'
+
+    X_data = np.load('/Volumes/GoogleDrive/My Drive/AmazonToCerrado1-2016/pred_data.npy')
+
+    # Load the Random Forest Classifier
+    model = get_model("/Volumes/GoogleDrive/My Drive/ResNet18-2019-Training/Model_2022.h5")
+
+    # Get Predictions
+    y_pred = model.predict(X_data)
+
+    # Construct Feature Collections for each biome for
+    # Earth Engine
+    ama_FC = "var ama_fc = ee.FeatureCollection(["
+    cer_FC = "var cer_fc = ee.FeatureCollection(["
+    cat_FC = "var cat_fc = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc = ee.FeatureCollection(["
+
+    # Construct time for progress updates:
+    previous_percentage = 0
+    start = time.time()
+
+    ama_count, cer_count, cat_count = 0, 0, 0
+
+    # Get list of all images in directory
+    images = [f.path for f in os.scandir(DIR) if f.is_file() and '.tif' in f.path]
+
+    if not len(images) == len(y_pred):
+        print ("ERROR IN PROCESSING")
+        print (len(images))
+        print (len(y_pred))
+        print (images[0:10])
+        print (y_pred[0:10])
+        quit()
+
+
+    for img_idx, image_name in enumerate(images):
+
+        image_class = get_class(y_pred[img_idx])
+
+        image_Feature = get_coord(image_name)
+
+        if image_class == 0:
+            ama_FC += "\n" + image_Feature
+            ama_count += 1
+
+        elif image_class == 1:
+            cer_FC += "\n" + image_Feature
+            cer_count += 1
+
+        elif image_class == 2:
+            cat_FC += "\n" + image_Feature
+            cat_count += 1
+
+        elif image_class == -2:
+            inconclusive_FC += "\n" + image_Feature
+
+        if img_idx%100 == 0:
+
+            percentage_progress = img_idx/len(images) * 100
+            end = time.time()
+            time_remaining = ((end - start)/(percentage_progress-previous_percentage)) * (100-percentage_progress)
+
+            print ("PROGRESS: {:.2f} TIME REMAINING: {:.2f} seconds ".format(percentage_progress, time_remaining))
+            previous_percentage = percentage_progress
+            start = time.time()
+
+    ama_FC +=  "\n]);"
+    cer_FC +=  "\n]);"
+    cat_FC +=  "\n]);"
+    inconclusive_FC +=  "\n]);"
+
+    print ("\n\n\n")
+    print (ama_FC)
+
+    print ("\n\n\n")
+    print (cer_FC)
+
+    print ("\n\n\n")
+    print (cat_FC)
+
+    print ("\n\n\n")
+    print (inconclusive_FC)
+
+    print (len(images))
+    ama_per = (ama_count/len(images)) * 100
+    cer_per = (cer_count/len(images)) * 100
+    cat_per = (cat_count/len(images)) * 100
+
+    print ("\nAmazon: {:.2f}%\nCerrado: {:.2f}%\nCaatinga: {:.2f}%".format(ama_per, cer_per, cat_per))
+if __name__ == "__main__":
+    main()
