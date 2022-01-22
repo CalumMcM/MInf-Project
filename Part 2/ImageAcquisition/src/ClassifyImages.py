@@ -135,7 +135,7 @@ def get_coord(DIR):
     Given a tif image and a directory this function will return the lat and long
     coordinates for the bottom left of the image as an Earth Engine Feature object
     """
-
+    point = False
     # Read raster
     with rs.open(DIR) as r:
         T0 = r.transform  # upper-left pixel corner affine transform
@@ -159,8 +159,12 @@ def get_coord(DIR):
     p2 = Proj(proj='latlong',datum='WGS84')
     longs, lats = transform(p1, p2, eastings, northings)
 
-    return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
-
+    if point:
+        return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
+    else:
+        top_long = longs[0][0]+0.015
+        top_lat = lats[0][0]+0.015
+        return ("ee.Feature(ee.Geometry.Rectangle({}, {}, {}, {})),".format(longs[0][0], lats[0][0], top_long, top_lat))
 def get_class(y_pred):
     """
     Returns the class with the highest
@@ -246,9 +250,9 @@ def main():
     # Test quads for each biome
     # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/AmazonToCerrado1-2016'
+    DIR = r'/Volumes/GoogleDrive/My Drive/AmazonToCerrado2-2021'
 
-    #X_data, images = build_dataset(DIR)
+    X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
     images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
@@ -260,10 +264,10 @@ def main():
 
     # Construct Feature Collections for each biome for
     # Earth Engine
-    ama_FC = "var ama_fc = ee.FeatureCollection(["
-    cer_FC = "var cer_fc = ee.FeatureCollection(["
-    cat_FC = "var cat_fc = ee.FeatureCollection(["
-    inconclusive_FC = "var inconclusive_fc = ee.FeatureCollection(["
+    ama_FC = "var ama_fc_2021 = ee.FeatureCollection(["
+    cer_FC = "var cer_fc_2021 = ee.FeatureCollection(["
+    cat_FC = "var cat_fc_2021 = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc_2021 = ee.FeatureCollection(["
 
     # Construct time for progress updates:
     previous_percentage = 0
@@ -316,17 +320,21 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    print ("\n\n\n")
-    print (ama_FC)
+    f = open("EarthEngine_Classifications.txt", "w")
+    f.write(ama_FC)
+    f.close()
 
-    print ("\n\n\n")
-    print (cer_FC)
+    f = open("EarthEngine_Classifications.txt", "a")
 
-    print ("\n\n\n")
-    print (cat_FC)
+    f.write("\n\n\n")
+    f.write (cer_FC)
 
-    print ("\n\n\n")
-    print (inconclusive_FC)
+    f.write ("\n\n\n")
+    f.write (cat_FC)
+
+    f.write("\n\n\n")
+    f.write(inconclusive_FC)
+    f.close()
 
     print (len(images))
     ama_per = (ama_count/len(images)) * 100
