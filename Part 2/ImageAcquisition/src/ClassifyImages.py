@@ -173,7 +173,7 @@ def get_class(y_pred):
     threshold then the inconclusive class
     is returned.
     """
-    threshold = 0.7
+    threshold = 0.8
     if np.amax(y_pred) > threshold:
         return np.argmax(y_pred)
     else:
@@ -252,7 +252,7 @@ def main():
     
     DIR = r'/Volumes/GoogleDrive/My Drive/AmazonToCerrado2-2021'
 
-    X_data, images = build_dataset(DIR)
+    #X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
     images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
@@ -273,7 +273,7 @@ def main():
     previous_percentage = 0
     start = time.time()
 
-    ama_count, cer_count, cat_count = 0, 0, 0
+    ama_count, cer_count, cat_count, inc_count = 0, 0, 0, 0
 
     if not len(images) == len(y_pred):
         print ("ERROR IN PROCESSING")
@@ -304,6 +304,7 @@ def main():
 
         elif image_class == -2:
             inconclusive_FC += "\n" + image_Feature
+            inc_count += 1
 
         if (img_idx+1)%100 == 0:
 
@@ -324,7 +325,7 @@ def main():
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications.txt", "a")
+    f = open("EarthEngine_Classifications2016.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)
@@ -340,7 +341,8 @@ def main():
     ama_per = (ama_count/len(images)) * 100
     cer_per = (cer_count/len(images)) * 100
     cat_per = (cat_count/len(images)) * 100
+    inc_per = (inc_count/len(images)) * 100
 
-    print ("\nAmazon: {:.2f}%\nCerrado: {:.2f}%\nCaatinga: {:.2f}%".format(ama_per, cer_per, cat_per))
+    print ("\nAmazon: {:.2f}%\nCerrado: {:.2f}%\nCaatinga: {:.2f}%\nInconclusive: {:.2f}\%".format(ama_per, cer_per, cat_per, inc_per))
 if __name__ == "__main__":
     main()
