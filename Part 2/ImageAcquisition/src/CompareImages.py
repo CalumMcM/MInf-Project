@@ -53,6 +53,7 @@ def compare_points(old_points, new_points):
                     key = old_biome + "->" + new_biome
                     conversions[key] += 1
 
+
     return conversions
 
 def main():

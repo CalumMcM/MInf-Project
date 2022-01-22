@@ -321,11 +321,11 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    f = open("EarthEngine_Classifications.txt", "w")
+    f = open("EarthEngine_Classifications2021.txt", "w")
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications2016.txt", "a")
+    f = open("EarthEngine_Classifications2021.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)
