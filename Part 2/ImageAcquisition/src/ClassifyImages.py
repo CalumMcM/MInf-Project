@@ -133,9 +133,8 @@ def get_model(model_DIR):
 def get_coord(DIR):
     """
     Given a tif image and a directory this function will return the lat and long
-    coordinates for the bottom left of the image as an Earth Engine Feature object
+    coordinates for the bottom left of the image
     """
-    point = False
     # Read raster
     with rs.open(DIR) as r:
         T0 = r.transform  # upper-left pixel corner affine transform
@@ -159,12 +158,21 @@ def get_coord(DIR):
     p2 = Proj(proj='latlong',datum='WGS84')
     longs, lats = transform(p1, p2, eastings, northings)
 
+    return longs, lats
+
+def make_feature(longs, lats):
+    point = False
+    """
+    Converts the given longs and lats for an image into a
+    google earth engine feature
+    """
     if point:
-        return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
+            return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
     else:
         top_long = longs[0][0]+0.015
         top_lat = lats[0][0]+0.015
         return ("ee.Feature(ee.Geometry.Rectangle({}, {}, {}, {})),".format(longs[0][0], lats[0][0], top_long, top_lat))
+
 def get_class(y_pred):
     """
     Returns the class with the highest
@@ -219,6 +227,11 @@ def build_dataset(head_DIR):
 
                 cur_img += 1
 
+                longs, lats = get_coord(image)
+
+                if longs[0][0] == -53.29796532743698 and lats[0][0] == -6.539741488787744:
+                    print (image)
+
         if (cur_img%50 == 0):
 
                 try:
@@ -250,24 +263,24 @@ def main():
     # Test quads for each biome
     # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/AmazonToCerrado2-2016'
+    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2021'
 
     X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
     images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
     # Load the Random Forest Classifier
-    model = get_model("/Volumes/GoogleDrive/My Drive/ResNet18-2019-Training/Model_2022.h5")
+    model = get_model("/Volumes/GoogleDrive/My Drive/ResNet/94_Model.h5")
 
     # Get Predictions
     y_pred = model.predict(X_data)
 
     # Construct Feature Collections for each biome for
     # Earth Engine
-    ama_FC = "var ama_fc_2016 = ee.FeatureCollection(["
-    cer_FC = "var cer_fc_2016 = ee.FeatureCollection(["
-    cat_FC = "var cat_fc_2016 = ee.FeatureCollection(["
-    inconclusive_FC = "var inconclusive_fc_2016 = ee.FeatureCollection(["
+    ama_FC = "var ama_fc_2021 = ee.FeatureCollection(["
+    cer_FC = "var cer_fc_2021 = ee.FeatureCollection(["
+    cat_FC = "var cat_fc_2021 = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc_2021 = ee.FeatureCollection(["
 
     # Construct time for progress updates:
     previous_percentage = 0
@@ -288,7 +301,9 @@ def main():
 
         image_class = get_class(y_pred[img_idx])
 
-        image_Feature = get_coord(image_name)
+        image_longs, image_lats = get_coord(image_name)
+
+        image_Feature = make_feature(image_longs, image_lats)
 
         if image_class == 0:
             ama_FC += "\n" + image_Feature
@@ -321,11 +336,11 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    f = open("EarthEngine_Classifications2016.txt", "w")
+    f = open("EarthEngine_Classifications2021.txt", "w")
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications2016.txt", "a")
+    f = open("EarthEngine_Classifications2021.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)

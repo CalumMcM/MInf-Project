@@ -66,7 +66,7 @@ def compare_points(old_points, new_points):
     for old_biome, old_biome_points in old_points.items():
         old_num_points += len(old_biome_points)
 
-    print ("Not Found {}/{}|{}".format(converted, old_num_points, new_num_points))
+    print ("Converted {}/{}|{}".format(converted, old_num_points, new_num_points))
     
     return conversions
 
