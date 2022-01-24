@@ -263,7 +263,7 @@ def main():
     # Test quads for each biome
     # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2021'
+    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2016'
 
     X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
@@ -277,10 +277,10 @@ def main():
 
     # Construct Feature Collections for each biome for
     # Earth Engine
-    ama_FC = "var ama_fc_2021 = ee.FeatureCollection(["
-    cer_FC = "var cer_fc_2021 = ee.FeatureCollection(["
-    cat_FC = "var cat_fc_2021 = ee.FeatureCollection(["
-    inconclusive_FC = "var inconclusive_fc_2021 = ee.FeatureCollection(["
+    ama_FC = "var ama_fc_2016 = ee.FeatureCollection(["
+    cer_FC = "var cer_fc_2016 = ee.FeatureCollection(["
+    cat_FC = "var cat_fc_2016 = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc_2016 = ee.FeatureCollection(["
 
     # Construct time for progress updates:
     previous_percentage = 0
@@ -336,11 +336,11 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    f = open("EarthEngine_Classifications2021.txt", "w")
+    f = open("EarthEngine_Classifications2016.txt", "w")
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications2021.txt", "a")
+    f = open("EarthEngine_Classifications2016.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)
