@@ -263,9 +263,9 @@ def main():
     # Test quads for each biome
     # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2016'
+    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2021'
 
-    X_data, images = build_dataset(DIR)
+    #X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
     images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
@@ -277,10 +277,10 @@ def main():
 
     # Construct Feature Collections for each biome for
     # Earth Engine
-    ama_FC = "var ama_fc_2016 = ee.FeatureCollection(["
-    cer_FC = "var cer_fc_2016 = ee.FeatureCollection(["
-    cat_FC = "var cat_fc_2016 = ee.FeatureCollection(["
-    inconclusive_FC = "var inconclusive_fc_2016 = ee.FeatureCollection(["
+    ama_FC = "var ama_fc_2021 = ee.FeatureCollection(["
+    cer_FC = "var cer_fc_2021 = ee.FeatureCollection(["
+    cat_FC = "var cat_fc_2021 = ee.FeatureCollection(["
+    inconclusive_FC = "var inconclusive_fc_2021 = ee.FeatureCollection(["
 
     # Construct time for progress updates:
     previous_percentage = 0
@@ -303,6 +303,9 @@ def main():
 
         image_longs, image_lats = get_coord(image_name)
 
+        if -53.397766286108045 in image_longs or -53.397766286108045 in image_lats:
+            print (y_pred[img_idx])
+            print (image_class)
         image_Feature = make_feature(image_longs, image_lats)
 
         if image_class == 0:
@@ -336,11 +339,11 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    f = open("EarthEngine_Classifications2016.txt", "w")
+    f = open("EarthEngine_Classifications2021.txt", "w")
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications2016.txt", "a")
+    f = open("EarthEngine_Classifications2021.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)
@@ -352,7 +355,6 @@ def main():
     f.write(inconclusive_FC)
     f.close()
 
-    print (len(images))
     ama_per = (ama_count/len(images)) * 100
     cer_per = (cer_count/len(images)) * 100
     cat_per = (cat_count/len(images)) * 100

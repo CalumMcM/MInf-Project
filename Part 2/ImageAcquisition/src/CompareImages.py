@@ -1,12 +1,11 @@
 import numpy as np
 
 def process_file(f):
-
+    
     lines = f.readlines()
 
     biome_points = {"ama" : [], "cer": [], "cat": [], "inc": []}
     biome = "ama"
-
     for line in lines:
         # Determine Current Biome
         if "ama_fc" in line:
@@ -56,9 +55,13 @@ def compare_points(old_points, new_points):
                     key = old_biome + "->" + new_biome
                     conversions[key] += 1
                     converted += 1
+                    if old_biome == 'inc' and new_biome == 'ama':
+                        print ("{} -> {}".format(old_biome, new_biome))
+                        print (point)
+    
                 elif point in old_biome_points:
                     found = True
-    
+
     new_num_points = 0
     for new_biome, new_biome_points in new_points.items():
         new_num_points += len(new_biome_points)
@@ -71,11 +74,11 @@ def compare_points(old_points, new_points):
     return conversions
 
 def main():
-
     f_2016 = open("EarthEngine_Classifications2016.txt", "r")
     f_2021 = open("EarthEngine_Classifications2021.txt", "r")
-
+    print ("2016)")
     biome_points_2016 = process_file(f_2016)
+    print ("2021")
     biome_points_2021 = process_file(f_2021)
 
     conversions = compare_points(biome_points_2016, biome_points_2021)
