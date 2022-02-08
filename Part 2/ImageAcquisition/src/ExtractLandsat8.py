@@ -71,7 +71,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2015-01-01', '2015-12-31').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2021-05-01', '2021-09-30').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -282,12 +282,15 @@ def visualExtract():
     geometry, usually without regard for the biome the geometry
     is in and so it's main purpose is for predictions on new unseen data
     """
+    
     args = get_args()
 
-    geometryVisual = geometryBorderMargin()
+    print ("Thread {} Start_Date: {}  num_imgs: {} seed: {} quad_num: {}                            STARTING\tVisual Strain".format(args.seed, args.start_date, args.num_imgs, args.seed, args.QuadNum))
+
+    geometryVisual = AreaofDeforestation()
 
     # Extract RGB
-    if args.outputType == "RGB":
+    if args.OutputType == "RGB":
 
         # Number of total tiles to extract
         N = args.seed+args.num_imgs
@@ -306,7 +309,7 @@ def visualExtract():
 
 
     # Extract NDVI
-    elif args.outputType == "NDVI":
+    elif args.OutputType == "NDVI":
 
         # Total number of tiles that will be extracted
         N = args.seed+args.num_imgs
@@ -334,12 +337,11 @@ def main():
 
     season = "Summer"
 
-    print ("Thread {} Start_Date: {}  num_imgs: {} seed: {} quad_num: {}                            STARTING".format(args.seed, args.start_date, args.num_imgs, args.seed, args.QuadNum))
-
-
     if (args.QuadNum == 'vis'):
         visualExtract()
         exit()
+
+    print ("Thread {} Start_Date: {}  num_imgs: {} seed: {} quad_num: {}                            STARTING".format(args.seed, args.start_date, args.num_imgs, args.seed, args.QuadNum))
 
     # Create Caatinga geometries
     geometryCAT = geometryPicker(int(args.QuadNum), "Caatinga")
@@ -767,6 +769,45 @@ def Ama_To_Inc():
         ee.Feature(ee.Geometry.Rectangle(-53.533007947428224, -6.317103109935631, -53.518007947428224, -6.302103109935631))
     ])
 
+
+def AmazonToCerrado1():
+    return ee.Geometry.Polygon(
+        [[[-56.035388775013914, -15.644746533620214],
+          [-56.233142681263914, -15.951315126171277],
+          [-56.524280376576414, -15.977721650106872],
+          [-56.628650493763914, -16.17302129785542],
+          [-56.985706157826414, -16.194123257533917],
+          [-57.090076275013914, -16.62621234209656],
+          [-56.996692485951414, -17.382639957133545],
+          [-56.447376079701414, -18.84445368059467],
+          [-55.974963970326414, -19.010730236265722],
+          [-55.321277446888914, -18.938004607201464],
+          [-54.892810650013914, -18.704029558257215],
+          [-54.574207134388914, -18.318567881724555],
+          [-54.502796001576414, -17.681205696547163],
+          [-54.656604595326414, -16.920741017387325],
+          [-55.266345806263914, -16.062199087620122]]])
+
+
+def AmazonToCerrado2():
+    return ee.Geometry.Polygon(
+        [[[-54.01196353425838, -5.51495556717548],
+          [-55.64343326082088, -6.350900267184527],
+          [-55.36328189363338, -7.359856734625503],
+          [-54.85241763582088, -7.098281025495162],
+          [-53.22644107332088, -7.147337966653623],
+          [-52.91882388582088, -6.85291856334284],
+          [-52.62768619050838, -5.831997971967348],
+          [-53.07812564363338, -5.810138618249126],
+          [-54.02294986238338, -5.569630410070629]]])
+
+def AreaofDeforestation():
+    return ee.Geometry.Polygon(
+        [[[-52.837665893635375, -6.653386470812877],
+          [-53.2620128174635, -5.806982587778027],
+          [-53.553150512776, -5.7632610934905655],
+          [-53.805836059651, -6.009149970781929],
+          [-53.64928088386975, -6.7420411786553744]]])
 if __name__ == "__main__":
 
     #ee.Authenticate()
