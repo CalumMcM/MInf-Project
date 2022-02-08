@@ -55,7 +55,7 @@ def compare_points(old_points, new_points):
                     key = old_biome + "->" + new_biome
                     conversions[key] += 1
                     converted += 1
-                    if old_biome == 'inc' and new_biome == 'ama':
+                    if old_biome == 'ama' and new_biome == 'inc':
                         print ("{} -> {}".format(old_biome, new_biome))
                         print (point)
     
