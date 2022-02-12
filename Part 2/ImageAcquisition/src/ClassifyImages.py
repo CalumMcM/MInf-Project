@@ -11,12 +11,19 @@ import tensorflow as tf
 from keras.models import Model
 from keras.layers import Dense, Conv2D, MaxPool2D, Flatten, GlobalAveragePooling2D,  BatchNormalization, Layer, Add, Dropout
 
+keep_images = [
+    -53.24928904409353,
+    -53.61327068409234,
+    -53.113061457120075,
+    -53.10601665844818,
+    -53.53294075403249
+]
+
 """
 Given a directory of images this file will classify each image
 using the best ResNet model and return the location of each of 
 images.
 """
-
 class ResnetBlock(Model):
     """
     A standard resnet block.
@@ -69,7 +76,7 @@ class ResnetBlock(Model):
         return out
 
 
-class ResNet18(Model):
+class ResNet21(Model):
 
     def __init__(self, num_classes, **kwargs):
         """
@@ -114,12 +121,12 @@ class ResNet18(Model):
 def get_model(model_DIR):
     """
     Takes the path to a pretrained ResNet model
-    that has the same structure as ResNet18 class 
+    that has the same structure as ResNet21 class 
     above. 
     Returns the model with the weights of the 
     pre-trained model loaded into it.
     """
-    model = ResNet18(3)
+    model = ResNet21(3)
 
     model.build(input_shape = (None, 51, 51, 3))
 
@@ -158,6 +165,9 @@ def get_coord(DIR):
     p2 = Proj(proj='latlong',datum='WGS84')
     longs, lats = transform(p1, p2, eastings, northings)
 
+    if longs[0][0] in keep_images:
+        print (DIR, longs[0][0])
+
     return longs, lats
 
 def make_feature(longs, lats):
@@ -182,6 +192,7 @@ def get_class(y_pred):
     is returned.
     """
     threshold = 0.8
+    print ("Prediction: ", y_pred)
     if np.amax(y_pred) > threshold:
         return np.argmax(y_pred)
     else:
@@ -195,7 +206,6 @@ def build_dataset(head_DIR):
 
     images = [f.path for f in os.scandir(head_DIR) if f.is_file() and '.tif' in f.path]
     clean_images = []
-
     previous_progress = 0
     start = time.time()
 
@@ -226,11 +236,6 @@ def build_dataset(head_DIR):
                 clean_images.append(image)
 
                 cur_img += 1
-
-                longs, lats = get_coord(image)
-
-                if longs[0][0] == -53.29796532743698 and lats[0][0] == -6.539741488787744:
-                    print (image)
 
         if (cur_img%50 == 0):
 
@@ -263,9 +268,9 @@ def main():
     # Test quads for each biome
     # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/AreaOfDeforestation-2021'
+    DIR = r'/Volumes/GoogleDrive/My Drive/CaatingaVisualisation'
 
-    #X_data, images = build_dataset(DIR)
+    X_data, images = build_dataset(DIR)
     X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
     images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
@@ -296,16 +301,13 @@ def main():
         print (y_pred[0:10])
         quit()
 
-
     for img_idx, image_name in enumerate(images):
 
         image_class = get_class(y_pred[img_idx])
+        print ("Class: ", image_class)
 
         image_longs, image_lats = get_coord(image_name)
 
-        if -53.397766286108045 in image_longs or -53.397766286108045 in image_lats:
-            print (y_pred[img_idx])
-            print (image_class)
         image_Feature = make_feature(image_longs, image_lats)
 
         if image_class == 0:
@@ -339,11 +341,11 @@ def main():
     cat_FC +=  "\n]);"
     inconclusive_FC +=  "\n]);"
 
-    f = open("EarthEngine_Classifications2021.txt", "w")
+    f = open("CaatingaInspection.txt", "w")
     f.write(ama_FC)
     f.close()
 
-    f = open("EarthEngine_Classifications2021.txt", "a")
+    f = open("CaatingaInspection.txt", "a")
 
     f.write("\n\n\n")
     f.write (cer_FC)
