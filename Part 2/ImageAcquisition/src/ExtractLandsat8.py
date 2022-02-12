@@ -149,17 +149,16 @@ def scale(image):
 # Given a biomes geometry this function will extract either the NDVI
 # data or the BGR images - based on the flag BGR_images - for each
 # tile in the image
-def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, seed, num_points):
+def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, seed, num_points, cur_point):
 
     # Add geomtry area to Google Earth Engine
     #Map.addLayer(biomeGeometry, {color: geometry_colour}, biome);
 
     # Get Feature Collection of random points within biome geometry
     #random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, num_points, seed, 10)
+    chosen_FC = Ama_To_Inc(cur_point)
     
-    chosen_points_FC = Ama_To_Inc()
-
-    geometries = chosen_points_FC.map(getCoord)
+    geometries = chosen_FC.map(getCoord)
 
     images = ee.ImageCollection(geometries.map(getImages, True))
 
@@ -276,6 +275,7 @@ def geometryPicker(quadNum, biome):
         if biome == "Caatinga":
             return geometryCATQuad4()
 
+
 def visualExtract():
     """
     A function used for specifically only exporting from one
@@ -297,15 +297,19 @@ def visualExtract():
 
         # Only extract 1 tile for each biome at a time
         num_points = 1
+        
+        # Variable purely for Ama_To_Inc Exploration:
+        cur_point = 0
 
         for i in range(args.seed, N):
 
-            biomeVisual = getBiomeImage(geometryVisual, 'ff0aad', 'Visual', True, i, num_points)
+            biomeVisual = getBiomeImage(geometryVisual, 'ff0aad', 'Visual', True, i, num_points, cur_point)
 
             visCollection = ee.FeatureCollection([biomeVisual]);
 
             if (ee.Algorithms.IsEqual(visCollection.size(), 1)):
-                export(biomeVisual, 'AmaToInc-2016', i)
+                export(biomeVisual, 'AmaToInc-2021', i)
+                cur_point += 1
 
 
     # Extract NDVI
@@ -755,20 +759,20 @@ def geometryExternalAma():
           [-63.44332203487761, -15.30456562040141],
           [-63.21688430731632, -14.71148237666636]]])
 
-def Ama_To_Inc():
-    return ee.FeatureCollection([
-        ee.Feature(ee.Geometry.Rectangle(-53.11312026833297, -6.624082850909348, -53.09812026833297, -6.609082850909348)),
-        ee.Feature(ee.Geometry.Rectangle(-53.10607126201212, -6.297039549260922, -53.09107126201212, -6.282039549260922)),
-        ee.Feature(ee.Geometry.Rectangle(-53.24935008684166, -6.460776978764056, -53.23435008684166, -6.445776978764056)),
-        ee.Feature(ee.Geometry.Rectangle(-53.49640485365901, -6.256003883690083, -53.48140485365901, -6.241003883690083)),
-        ee.Feature(ee.Geometry.Rectangle(-53.23862300617458, -6.487400081744558, -53.22362300617458, -6.472400081744558)),
-        ee.Feature(ee.Geometry.Rectangle(-53.33491287646091, -6.378228771303218, -53.31991287646091, -6.363228771303218)),
-        ee.Feature(ee.Geometry.Rectangle(-53.56178859885768, -6.4915629388435585, -53.54678859885768, -6.476562938843559)),
-        ee.Feature(ee.Geometry.Rectangle(-53.39789144100922, -6.040352940144524, -53.38289144100922, -6.025352940144525)),
-        ee.Feature(ee.Geometry.Rectangle(-53.613343207976584, -6.605977829421326, -53.59834320797658, -6.590977829421326)),
-        ee.Feature(ee.Geometry.Rectangle(-53.533007947428224, -6.317103109935631, -53.518007947428224, -6.302103109935631))
-    ])
-
+def Ama_To_Inc(cur_point):
+    print (cur_point)
+    points = [ee.Geometry.Point(-53.11312026833297, -6.624082850909348),
+        ee.Geometry.Point(-53.10607126201212, -6.297039549260922),
+        ee.Geometry.Point(-53.24935008684166, -6.460776978764056),
+        ee.Geometry.Point(-53.49640485365901, -6.256003883690083),
+        ee.Geometry.Point(-53.23862300617458, -6.487400081744558),
+        ee.Geometry.Point(-53.33491287646091, -6.378228771303218),
+        ee.Geometry.Point(-53.56178859885768, -6.491562938843558),
+        ee.Geometry.Point(-53.39789144100922, -6.040352940144524),
+        ee.Geometry.Point(-53.613343207976584, -6.605977829421326),
+        ee.Geometry.Point(-53.533007947428224, -6.3171031099356311)
+    ]
+    return ee.FeatureCollection([points[cur_point]])
 
 def AmazonToCerrado1():
     return ee.Geometry.Polygon(
