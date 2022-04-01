@@ -1,19 +1,22 @@
 import os
 import time
+import pickle
 import numpy as np
 import rasterio as rs
 from PIL import Image
 from affine import Affine
 from matplotlib import cm
-from sample_tiles import *
+# from sample_tiles import *
 from pyproj import Proj, transform
 import tensorflow as tf
 from keras.models import Model
+from keras.models import Sequential
+from tensorflow.keras import datasets,models,layers
 from keras.layers import Dense, Conv2D, MaxPool2D, Flatten, GlobalAveragePooling2D,  BatchNormalization, Layer, Add, Dropout
 
 keep_images = [
     -53.24928904409353,
-    -53.61327068409234,
+    -53.61327068409234, 
     -53.113061457120075,
     -53.10601665844818,
     -53.53294075403249
@@ -76,65 +79,75 @@ class ResnetBlock(Model):
         return out
 
 
-class ResNet21(Model):
+def get_model():
+    model = Sequential()
 
-    def __init__(self, num_classes, **kwargs):
-        """
-            num_classes: number of classes in specific classification task.
-        """
-        super().__init__(**kwargs)
-        self.conv_1 = Conv2D(32, (7, 7), strides=2,
-                             padding="same", kernel_initializer="he_normal")
-        self.init_bn = BatchNormalization()
-        self.pool_2 = MaxPool2D(pool_size=(2, 2), strides=2, padding="same")
-        self.res_1_1 = ResnetBlock(32)
-        self.res_1_2 = ResnetBlock(32)
-        self.dropout1_3 = Dropout(0.3)
-        self.res_2_1 = ResnetBlock(64, down_sample=True)
-        self.res_2_2 = ResnetBlock(64)
-        self.dropout2_3 = Dropout(0.3)
-        #self.res_3_1 = ResnetBlock(32, down_sample=True)
-        #self.res_3_2 = ResnetBlock(32)
-        # self.res_4_1 = ResnetBlock(512, down_sample=True)
-        # self.res_4_2 = ResnetBlock(512)
-        self.avg_pool = GlobalAveragePooling2D()
-        self.flat = Flatten()
-        self.fc = Dense(num_classes, activation="softmax")
+    # Conv2D layer
+    model.add(
+        Conv2D(32, 
+            (7, 7), 
+            strides=2,
+            padding="same",
+                kernel_initializer="he_normal",
+                input_shape=(51,51,3))
+    )
+    # Batch Norm
+    model.add(BatchNormalization())
 
-    def call(self, inputs):
-        out = self.conv_1(inputs)
-        out = self.init_bn(out)
-        out = tf.nn.relu(out)
-        out = self.pool_2(out)
-        i = 0
-        #for res_block in [self.res_1_1, self.res_1_2, self.res_2_1, self.res_2_2, self.res_3_1, self.res_3_2, self.res_4_1, self.res_4_2]:
-        for res_block in [self.res_1_1, self.res_1_2, self.res_2_1, self.res_2_2]:
-            out = res_block(out)
-            i += 1
-            if i %2 == 0:
-                out = self.dropout1_3(out)
-        out = self.avg_pool(out)
-        out = self.flat(out)
-        out = self.fc(out)
-        return out
+    # Max Pooling Layer
+    model.add(
+        MaxPool2D(pool_size=(2, 2), strides=2, padding="same")
+        )
 
-def get_model(model_DIR):
-    """
-    Takes the path to a pretrained ResNet model
-    that has the same structure as ResNet21 class 
-    above. 
-    Returns the model with the weights of the 
-    pre-trained model loaded into it.
-    """
-    model = ResNet21(3)
+    # ResNet Layer 1
+    model.add(
+        ResnetBlock(32)
+    )
 
-    model.build(input_shape = (None, 51, 51, 3))
+    # ResNet Layer 1
+    model.add(
+        ResnetBlock(32)
+    )
+    # Dropout Layer 1
+    model.add(
+        layers.Dropout(0.1)
+    )
 
-    model.compile(optimizer = 'adam', loss = 'catergorical_crossentropy', metrics=["accuracy"])
+    # ResNet Layer 2
+    model.add(
+        ResnetBlock(64, down_sample=True)
+    )
 
-    model.load_weights(model_DIR)
-    
-    return model
+    # ResNet Layer 2
+    model.add(
+        ResnetBlock(64)
+    )
+    # Dropout Layer 2
+    model.add(
+        layers.Dropout(0.1)
+    )
+
+    # Global Average Pooling Layer
+    model.add(
+        GlobalAveragePooling2D()
+    )
+
+    # Flatten Layer
+    model.add(
+        layers.Flatten()
+    )
+
+    # Epistemic Dropout Layer
+    model.add(
+        layers.Dropout(0.1)
+    )
+
+    # Dense Layer
+    model.add(
+        layers.Dense(3, activation = "softmax")
+    )
+
+    return model  
 
 
 def get_coord(DIR):
@@ -165,8 +178,8 @@ def get_coord(DIR):
     p2 = Proj(proj='latlong',datum='WGS84')
     longs, lats = transform(p1, p2, eastings, northings)
 
-    if longs[0][0] in keep_images:
-        print (DIR, longs[0][0])
+    #if longs[0][0] in keep_images:
+    #print (DIR, longs[0][0])
 
     return longs, lats
 
@@ -179,8 +192,8 @@ def make_feature(longs, lats):
     if point:
             return ("ee.Feature(ee.Geometry.Point({}, {})),".format(longs[0][0], lats[0][0]))
     else:
-        top_long = longs[0][0]+0.015
-        top_lat = lats[0][0]+0.015
+        top_long = longs[0][0]+0.015#0.08#
+        top_lat = lats[0][0]+0.015#0.08
         return ("ee.Feature(ee.Geometry.Rectangle({}, {}, {}, {})),".format(longs[0][0], lats[0][0], top_long, top_lat))
 
 def get_class(y_pred):
@@ -192,14 +205,72 @@ def get_class(y_pred):
     is returned.
     """
     threshold = 0.8
-    print ("Prediction: ", y_pred)
+    #print ("Prediction: ", y_pred)
+    if np.argmax(y_pred) == 0:
+        print (y_pred)
     if np.amax(y_pred) > threshold:
         return np.argmax(y_pred)
     else:
         return -2
 
-def build_dataset(head_DIR):
+      
+def reset_shape(tile):
+  """
+  Takes a tile and removes/pads it
+  so that the returned tile has shape
+  (51, 51, 3)
+  """
+  x, y, z = tile.shape
+      
+  # Reduce shape
+  if (x == 51 and y == 51):
+    return tile
 
+  elif (x>51):
+    tile = np.delete(tile, -1, 0)
+    return reset_shape(tile)
+
+  elif (y>51):
+    tile = np.delete(tile, -1, 1)
+    return reset_shape(tile)
+
+  # Pad shape
+  elif (x<51):
+
+    basic = np.array([tile[0]])
+
+    tile = np.vstack((tile, basic))
+    
+    return reset_shape(tile)
+
+  elif (y < 51):
+              
+    mean = np.mean(tile)
+    new_col = np.full((51,1,3), mean)
+
+    tile = np.append(tile, new_col, axis=1)
+    
+    #tile = np.append(tile, basic, axis=1)
+            
+    return reset_shape(tile)
+
+def remove_nan(new_tile):
+    """
+    Takes a tile and replaces any nan values with the mean
+    of the image the nan appears in
+    """
+    
+    mean = np.nanmean(new_tile)
+        
+    new_tile = np.nan_to_num(new_tile, nan=mean, posinf=mean, neginf=mean)
+    
+    return new_tile
+    
+def build_dataset(head_DIR):
+    """
+    Given a directory will load all .tif files into a matrix
+    after applying preprocessing techniques to each image
+    """
     X_data = np.zeros((1,51,51,3))
     
     cur_img = 0
@@ -259,109 +330,134 @@ def build_dataset(head_DIR):
     return X_data, clean_images
                 
 def main():
-    """
-    Given a directory (DIR) till load the
-    built dataset and predict the biome 
-    of each of the images
-    """
-
-    # Test quads for each biome
-    # Cat quad 3, Cer Quad 4, Ama Quad 2
     
-    DIR = r'/Volumes/GoogleDrive/My Drive/CaatingaVisualisation'
+    for YEAR in ['20']:#, '21']:
 
-    X_data, images = build_dataset(DIR)
-    X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
-    images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
+        print (f'YEAR: 20{YEAR}')
+        
+        """
+        Given a directory (DIR) till load the
+        built dataset and predict the biome 
+        of each of the images
+        """
 
-    # Load the Random Forest Classifier
-    model = get_model("/Volumes/GoogleDrive/My Drive/ResNet/94_Model.h5")
+        # Test quads for each biome
+        # Cat quad 3, Cer Quad 4, Ama Quad 2
+        
+        #DIR = r'/Volumes/GoogleDrive-103278653964135897318/My Drive/AmaToInc-20'+YEAR+'/'
+        DIR = r'/Volumes/GoogleDrive-103278653964135897318/My Drive/LargeScaleExample_20'+YEAR+'/'
+        DIR = r'/Users/calum/Downloads/PP_GridPoints_20'+YEAR+'/'
 
-    # Get Predictions
-    y_pred = model.predict(X_data)
+        X_data, images = build_dataset(DIR)
+        X_data = np.load(os.path.join(DIR, 'pred_data.npy'))
+        images = np.load(os.path.join(DIR, 'cleaned_images.npy'))
 
-    # Construct Feature Collections for each biome for
-    # Earth Engine
-    ama_FC = "var ama_fc_2021 = ee.FeatureCollection(["
-    cer_FC = "var cer_fc_2021 = ee.FeatureCollection(["
-    cat_FC = "var cat_fc_2021 = ee.FeatureCollection(["
-    inconclusive_FC = "var inconclusive_fc_2021 = ee.FeatureCollection(["
+        # Load the Random Forest Classifier
+        model = get_model() 
 
-    # Construct time for progress updates:
-    previous_percentage = 0
-    start = time.time()
+        model.build(input_shape = (None,51,51,3))
 
-    ama_count, cer_count, cat_count, inc_count = 0, 0, 0, 0
+        model.compile(optimizer = "adam",loss='categorical_crossentropy', metrics=["accuracy"]) 
 
-    if not len(images) == len(y_pred):
-        print ("ERROR IN PROCESSING")
-        print (len(images))
-        print (len(y_pred))
-        print (images[0:10])
-        print (y_pred[0:10])
-        quit()
+        #print (model.summary())
 
-    for img_idx, image_name in enumerate(images):
+        # Load in the models weights
+        model.load_weights("/Volumes/GoogleDrive-103278653964135897318/My Drive/ResNet/ResNet_EpistemicUncertainty_model.h5")#ResNet_manual_2_32_01_Model.h5")
 
-        image_class = get_class(y_pred[img_idx])
-        print ("Class: ", image_class)
+        # Get Predictions
+        y_pred = model.predict(X_data)
 
-        image_longs, image_lats = get_coord(image_name)
+        # Construct Feature Collections for each biome for
+        # Earth Engine
+        ama_FC = "var ama_fc_20"+YEAR+" = ee.FeatureCollection(["
+        cer_FC = "var cer_fc_20"+YEAR+" = ee.FeatureCollection(["
+        cat_FC = "var cat_fc_20"+YEAR+" = ee.FeatureCollection(["
+        inconclusive_FC = "var inconclusive_fc_20"+YEAR+" = ee.FeatureCollection(["
 
-        image_Feature = make_feature(image_longs, image_lats)
+        # Construct time for progress updates:
+        previous_percentage = 0
+        start = time.time()
 
-        if image_class == 0:
-            ama_FC += "\n" + image_Feature
-            ama_count += 1
+        ama_count, cer_count, cat_count, inc_count = 0, 0, 0, 0
 
-        elif image_class == 1:
-            cer_FC += "\n" + image_Feature
-            cer_count += 1
+        if not len(images) == len(y_pred):
+            print ("ERROR IN PROCESSING")
+            quit()
 
-        elif image_class == 2:
-            cat_FC += "\n" + image_Feature
-            cat_count += 1
+        print ("PROCESSING IMAGES")
+        for img_idx, image_name in enumerate(images):
 
-        elif image_class == -2:
-            inconclusive_FC += "\n" + image_Feature
-            inc_count += 1
+            image_class = get_class(y_pred[img_idx])
+            #print ("Class: ", image_class)
 
-        if (img_idx+1)%100 == 0:
+            image_longs, image_lats = get_coord(image_name)
 
-            percentage_progress = img_idx/len(images) * 100
-            end = time.time()
-            time_remaining = ((end - start)/(percentage_progress-previous_percentage)) * (100-percentage_progress)
+            if image_class != 0:
+                print (image_class)
+                print (image_name)
+            if '92.tif' in image_name or '93.tif' in image_name:
+                print (image_name)
+            image_Feature = make_feature(image_longs, image_lats)
 
-            print ("PROGRESS: {:.2f} TIME REMAINING: {:.2f} seconds ".format(percentage_progress, time_remaining))
-            previous_percentage = percentage_progress
-            start = time.time()
+            if image_class == 0:
+                ama_FC += "\n" + image_Feature
+                ama_count += 1
 
-    ama_FC +=  "\n]);"
-    cer_FC +=  "\n]);"
-    cat_FC +=  "\n]);"
-    inconclusive_FC +=  "\n]);"
+            elif image_class == 1:
+                cer_FC += "\n" + image_Feature
+                cer_count += 1
 
-    f = open("CaatingaInspection.txt", "w")
-    f.write(ama_FC)
-    f.close()
+            elif image_class == 2:
+                cat_FC += "\n" + image_Feature
+                cat_count += 1
 
-    f = open("CaatingaInspection.txt", "a")
+            elif image_class == -2:
+                inconclusive_FC += "\n" + image_Feature
+                inc_count += 1
 
-    f.write("\n\n\n")
-    f.write (cer_FC)
+            if (img_idx+1)%100 == 0:
 
-    f.write ("\n\n\n")
-    f.write (cat_FC)
+                percentage_progress = img_idx/len(images) * 100
+                end = time.time()
+                time_remaining = ((end - start)/(percentage_progress-previous_percentage)) * (100-percentage_progress)
 
-    f.write("\n\n\n")
-    f.write(inconclusive_FC)
-    f.close()
+                print ("PROGRESS: {:.2f} TIME REMAINING: {:.2f} seconds ".format(percentage_progress, time_remaining))
+                previous_percentage = percentage_progress
+                start = time.time()
 
-    ama_per = (ama_count/len(images)) * 100
-    cer_per = (cer_count/len(images)) * 100
-    cat_per = (cat_count/len(images)) * 100
-    inc_per = (inc_count/len(images)) * 100
+        ama_FC +=  "\n]);"
+        cer_FC +=  "\n]);"
+        cat_FC +=  "\n]);"
+        inconclusive_FC +=  "\n]);"
 
-    print ("\nAmazon: {:.2f}%\nCerrado: {:.2f}%\nCaatinga: {:.2f}%\nInconclusive: {:.2f}\%".format(ama_per, cer_per, cat_per, inc_per))
+        f = open("Classifications/LargeScaleExample_20"+YEAR+".txt", "w")
+        f.write(ama_FC)
+        f.close()
+
+        f = open("Classifications/LargeScaleExample_20"+YEAR+".txt", "a")
+
+        f.write("\n\n\n")
+        f.write (cer_FC)
+
+        f.write ("\n\n\n")
+        f.write (cat_FC)
+
+        f.write("\n\n\n")
+        f.write(inconclusive_FC)
+        f.close()
+
+        ama_per = (ama_count/len(images)) * 100
+        cer_per = (cer_count/len(images)) * 100
+        cat_per = (cat_count/len(images)) * 100
+        inc_per = (inc_count/len(images)) * 100
+
+        print ("\nAmazon: {:.2f}%\nCerrado: {:.2f}%\nCaatinga: {:.2f}%\nInconclusive: {:.2f}\%".format(ama_per, cer_per, cat_per, inc_per))
+    
+    with open('predictions_2016.pkl', 'wb') as f:
+        pickle.dump(predictions_2016, f)
+        
+    with open('predictions_2016.pkl', 'wb') as f:
+        pickle.dump(predictions_2021, f)
+
 if __name__ == "__main__":
     main()

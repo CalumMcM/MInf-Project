@@ -1,5 +1,9 @@
 import numpy as np
 
+"""
+File used to identify images that have changed class at any point.
+Achieves this by comparing two text files of classifications
+"""
 def process_file(f):
     
     lines = f.readlines()

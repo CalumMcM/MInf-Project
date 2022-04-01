@@ -5,8 +5,8 @@ import numpy as np
 """
 Goes through a given list of directories that store the yearly iamges 
 for each array, combining images of the same area into one shared directory
-
 """
+
 def make_biome_folder(biomeName: str, DIR: str):
     subfolders = [f.path for f in os.scandir(DIR) if f.is_dir()]
     

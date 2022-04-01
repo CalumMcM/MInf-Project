@@ -1,8 +1,8 @@
 #!/bin/bash
-echo "Bash version ${BASH_VERSION}..."
+echo "Bash version${BASH_VERSION}..."
 
-CUR_START_DATE='2016-05-01' # THIS SHOULD BE THE SAME AS IT IS IN ExtractLandsat8.py
-NUM_IMGS=2 # The number of images that are downloaded per thread divided by 3 (given there are three biomes)
+CUR_START_DATE='2020-05-01' # THIS SHOULD BE THE SAME AS IT IS IN ExtractLandsat8.py
+NUM_IMGS=20 # The number of images that are downloaded per thread divided by 3 (given there are three biomes)
 NUM_THREADS=50 
 
 total_quad_images=$((NUM_IMGS*NUM_THREADS))

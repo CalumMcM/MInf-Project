@@ -71,7 +71,7 @@ def getImages(feature):
   geo = ee.Geometry.Polygon(feature.geometry().coordinates().get(0))
   centroid = feature.geometry().centroid();
 
-  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2021-05-01', '2021-09-30').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
+  image = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterDate('2020-05-01', '2020-09-30').filterBounds(geo).sort('CLOUD_COVER').first(); # September -> April
 
   image = image.clip(geo)
 
@@ -155,9 +155,11 @@ def getBiomeImage(biomeGeometry, geometry_colour, biome, BGR_images, seed, num_p
     #Map.addLayer(biomeGeometry, {color: geometry_colour}, biome);
 
     # Get Feature Collection of random points within biome geometry
-    #random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, num_points, seed, 10)
-    chosen_FC = Ama_To_Inc(cur_point)
-    
+    random_points_FC = ee.FeatureCollection.randomPoints(biomeGeometry, num_points, seed, 10)
+
+    # For selected list of points:
+    chosen_FC = ProjectPresentation_GridPoints(cur_point)
+
     geometries = chosen_FC.map(getCoord)
 
     images = ee.ImageCollection(geometries.map(getImages, True))
@@ -308,7 +310,7 @@ def visualExtract():
             visCollection = ee.FeatureCollection([biomeVisual]);
 
             if (ee.Algorithms.IsEqual(visCollection.size(), 1)):
-                export(biomeVisual, 'AmaToInc-2021', i)
+                export(biomeVisual, 'PP_GridPoints_2020', i)
                 cur_point += 1
 
 
@@ -812,6 +814,141 @@ def AreaofDeforestation():
           [-53.553150512776, -5.7632610934905655],
           [-53.805836059651, -6.009149970781929],
           [-53.64928088386975, -6.7420411786553744]]])
+
+def LargeScaleExample():
+    return ee.Geometry.Polygon(
+        [[[-62.019319827521905, -10.914328014636668],
+          [-62.019319827521905, -16.578389129130294],
+          [-54.55960303064691, -16.578389129130294],
+          [-54.55960303064691, -10.914328014636668]]])
+
+def ProjectPresentation_GridPoints(cur_point):
+    print (cur_point)
+    points = [
+        ee.Geometry.Point(-53.6396, -6.2661),
+        ee.Geometry.Point(-53.6396, -6.3002199999999995),
+        ee.Geometry.Point(-53.6396, -6.334339999999999),
+        ee.Geometry.Point(-53.6396, -6.368459999999999),
+        ee.Geometry.Point(-53.6396, -6.402579999999999),
+        ee.Geometry.Point(-53.6396, -6.436699999999998),
+        ee.Geometry.Point(-53.6396, -6.470819999999998),
+        ee.Geometry.Point(-53.6396, -6.504939999999998),
+        ee.Geometry.Point(-53.6396, -6.539059999999997),
+        ee.Geometry.Point(-53.6396, -6.573179999999997),
+        ee.Geometry.Point(-53.6396, -6.607299999999997),
+        ee.Geometry.Point(-53.60018, -6.2661),
+        ee.Geometry.Point(-53.60018, -6.3002199999999995),
+        ee.Geometry.Point(-53.60018, -6.334339999999999),
+        ee.Geometry.Point(-53.60018, -6.368459999999999),
+        ee.Geometry.Point(-53.60018, -6.402579999999999),
+        ee.Geometry.Point(-53.60018, -6.436699999999998),
+        ee.Geometry.Point(-53.60018, -6.470819999999998),
+        ee.Geometry.Point(-53.60018, -6.504939999999998),
+        ee.Geometry.Point(-53.60018, -6.539059999999997),
+        ee.Geometry.Point(-53.60018, -6.573179999999997),
+        ee.Geometry.Point(-53.60018, -6.607299999999997),
+        ee.Geometry.Point(-53.56076, -6.2661),
+        ee.Geometry.Point(-53.56076, -6.3002199999999995),
+        ee.Geometry.Point(-53.56076, -6.334339999999999),
+        ee.Geometry.Point(-53.56076, -6.368459999999999),
+        ee.Geometry.Point(-53.56076, -6.402579999999999),
+        ee.Geometry.Point(-53.56076, -6.436699999999998),
+        ee.Geometry.Point(-53.56076, -6.470819999999998),
+        ee.Geometry.Point(-53.56076, -6.504939999999998),
+        ee.Geometry.Point(-53.56076, -6.539059999999997),
+        ee.Geometry.Point(-53.56076, -6.573179999999997),
+        ee.Geometry.Point(-53.56076, -6.607299999999997),
+        ee.Geometry.Point(-53.52134, -6.2661),
+        ee.Geometry.Point(-53.52134, -6.3002199999999995),
+        ee.Geometry.Point(-53.52134, -6.334339999999999),
+        ee.Geometry.Point(-53.52134, -6.368459999999999),
+        ee.Geometry.Point(-53.52134, -6.402579999999999),
+        ee.Geometry.Point(-53.52134, -6.436699999999998),
+        ee.Geometry.Point(-53.52134, -6.470819999999998),
+        ee.Geometry.Point(-53.52134, -6.504939999999998),
+        ee.Geometry.Point(-53.52134, -6.539059999999997),
+        ee.Geometry.Point(-53.52134, -6.573179999999997),
+        ee.Geometry.Point(-53.52134, -6.607299999999997),
+        ee.Geometry.Point(-53.48192, -6.2661),
+        ee.Geometry.Point(-53.48192, -6.3002199999999995),
+        ee.Geometry.Point(-53.48192, -6.334339999999999),
+        ee.Geometry.Point(-53.48192, -6.368459999999999),
+        ee.Geometry.Point(-53.48192, -6.402579999999999),
+        ee.Geometry.Point(-53.48192, -6.436699999999998),
+        ee.Geometry.Point(-53.48192, -6.470819999999998),
+        ee.Geometry.Point(-53.48192, -6.504939999999998),
+        ee.Geometry.Point(-53.48192, -6.539059999999997),
+        ee.Geometry.Point(-53.48192, -6.573179999999997),
+        ee.Geometry.Point(-53.48192, -6.607299999999997),
+        ee.Geometry.Point(-53.4425, -6.2661),
+        ee.Geometry.Point(-53.4425, -6.3002199999999995),
+        ee.Geometry.Point(-53.4425, -6.334339999999999),
+        ee.Geometry.Point(-53.4425, -6.368459999999999),
+        ee.Geometry.Point(-53.4425, -6.402579999999999),
+        ee.Geometry.Point(-53.4425, -6.436699999999998),
+        ee.Geometry.Point(-53.4425, -6.470819999999998),
+        ee.Geometry.Point(-53.4425, -6.504939999999998),
+        ee.Geometry.Point(-53.4425, -6.539059999999997),
+        ee.Geometry.Point(-53.4425, -6.573179999999997),
+        ee.Geometry.Point(-53.4425, -6.607299999999997),
+        ee.Geometry.Point(-53.40308, -6.2661),
+        ee.Geometry.Point(-53.40308, -6.3002199999999995),
+        ee.Geometry.Point(-53.40308, -6.334339999999999),
+        ee.Geometry.Point(-53.40308, -6.368459999999999),
+        ee.Geometry.Point(-53.40308, -6.402579999999999),
+        ee.Geometry.Point(-53.40308, -6.436699999999998),
+        ee.Geometry.Point(-53.40308, -6.470819999999998),
+        ee.Geometry.Point(-53.40308, -6.504939999999998),
+        ee.Geometry.Point(-53.40308, -6.539059999999997),
+        ee.Geometry.Point(-53.40308, -6.573179999999997),
+        ee.Geometry.Point(-53.40308, -6.607299999999997),
+        ee.Geometry.Point(-53.36366, -6.2661),
+        ee.Geometry.Point(-53.36366, -6.3002199999999995),
+        ee.Geometry.Point(-53.36366, -6.334339999999999),
+        ee.Geometry.Point(-53.36366, -6.368459999999999),
+        ee.Geometry.Point(-53.36366, -6.402579999999999),
+        ee.Geometry.Point(-53.36366, -6.436699999999998),
+        ee.Geometry.Point(-53.36366, -6.470819999999998),
+        ee.Geometry.Point(-53.36366, -6.504939999999998),
+        ee.Geometry.Point(-53.36366, -6.539059999999997),
+        ee.Geometry.Point(-53.36366, -6.573179999999997),
+        ee.Geometry.Point(-53.36366, -6.607299999999997),
+        ee.Geometry.Point(-53.32424, -6.2661),
+        ee.Geometry.Point(-53.32424, -6.3002199999999995),
+        ee.Geometry.Point(-53.32424, -6.334339999999999),
+        ee.Geometry.Point(-53.32424, -6.368459999999999),
+        ee.Geometry.Point(-53.32424, -6.402579999999999),
+        ee.Geometry.Point(-53.32424, -6.436699999999998),
+        ee.Geometry.Point(-53.32424, -6.470819999999998),
+        ee.Geometry.Point(-53.32424, -6.504939999999998),
+        ee.Geometry.Point(-53.32424, -6.539059999999997),
+        ee.Geometry.Point(-53.32424, -6.573179999999997),
+        ee.Geometry.Point(-53.32424, -6.607299999999997),
+        ee.Geometry.Point(-53.28482, -6.2661),
+        ee.Geometry.Point(-53.28482, -6.3002199999999995),
+        ee.Geometry.Point(-53.28482, -6.334339999999999),
+        ee.Geometry.Point(-53.28482, -6.368459999999999),
+        ee.Geometry.Point(-53.28482, -6.402579999999999),
+        ee.Geometry.Point(-53.28482, -6.436699999999998),
+        ee.Geometry.Point(-53.28482, -6.470819999999998),
+        ee.Geometry.Point(-53.28482, -6.504939999999998),
+        ee.Geometry.Point(-53.28482, -6.539059999999997),
+        ee.Geometry.Point(-53.28482, -6.573179999999997),
+        ee.Geometry.Point(-53.28482, -6.607299999999997),
+        ee.Geometry.Point(-53.245400000000004, -6.2661),
+        ee.Geometry.Point(-53.245400000000004, -6.3002199999999995),
+        ee.Geometry.Point(-53.245400000000004, -6.334339999999999),
+        ee.Geometry.Point(-53.245400000000004, -6.368459999999999),
+        ee.Geometry.Point(-53.245400000000004, -6.402579999999999),
+        ee.Geometry.Point(-53.245400000000004, -6.436699999999998),
+        ee.Geometry.Point(-53.245400000000004, -6.470819999999998),
+        ee.Geometry.Point(-53.245400000000004, -6.504939999999998),
+        ee.Geometry.Point(-53.245400000000004, -6.539059999999997),
+        ee.Geometry.Point(-53.245400000000004, -6.573179999999997),
+        ee.Geometry.Point(-53.245400000000004, -6.607299999999997)
+    ]
+    return ee.FeatureCollection([points[cur_point]])
+
 if __name__ == "__main__":
 
     #ee.Authenticate()

@@ -1,0 +1,24 @@
+
+
+Feature_Collection = []
+
+new_lat = -53.6396
+num_img = 0
+
+while(new_lat < -53.2454):
+    
+    new_long = -6.2661
+
+    while(new_long > -6.6073):
+        
+        feature = f"ee.Geometry.Point({new_lat}, {new_long}),"
+
+        Feature_Collection.append(feature)
+        num_img += 1
+        new_long -= 0.03412
+  
+    new_lat += 0.03942
+
+for f in Feature_Collection:
+
+    print (f)
